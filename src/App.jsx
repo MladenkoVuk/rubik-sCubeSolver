@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { initThree, createCubies, checkColorsSolved, MOVES } from './Cube'
 import { executeMove } from './Controls'
 import { LeftSidebar, RightSidebar } from './Sidebar'
+import InstructionModal from './instructionModal';
 
 export default function App() {
   const canvasRef     = useRef(null)
@@ -25,7 +26,11 @@ export default function App() {
   const [leftOpen,     setLeftOpen]     = useState(false)
   const [rightOpen,    setRightOpen]    = useState(false)
   const [scrambleSeq,  setScrambleSeq]  = useState('')
-
+  const [modalData, setModalData] = useState({ isOpen: false, title: '', algo: '', setup: '' });
+  
+  const openHelper = (title, algo, setup = "") => {
+  setModalData({ isOpen: true, title, algo, setup });
+};
   // ── Three.js init ──────────────────────────────────────────────────────────
   useEffect(() => {
     const canvas = canvasRef.current
@@ -34,23 +39,23 @@ export default function App() {
     cubiesRef.current = createCubies(three.scene)
 
     let raf
-    const tick = () => {
-      raf = requestAnimationFrame(tick)
-      const { x, y } = three.getRotation()
-      three.scene.rotation.x = x
-      three.scene.rotation.y = y
+const tick = () => {
+  raf = requestAnimationFrame(tick);
 
-      if (!animatingRef.current && moveQueueRef.current.length > 0) {
-        executeMove(
-          moveQueueRef.current.shift(),
-          cubiesRef.current,
-          animatingRef,
-          { setMoveCount, setMoveHistory, setSolved, setTimerRunning },
-          { moveCountRef, solvedRef, timerRunRef, startTimeRef }
-        )
-      }
-      three.renderer.render(three.scene, three.camera)
-    }
+  // Samo pozovi update, on sada direktno menja scene.quaternion
+  three.update(); 
+
+  if (!animatingRef.current && moveQueueRef.current.length > 0) {
+    executeMove(
+      moveQueueRef.current.shift(),
+      cubiesRef.current,
+      animatingRef,
+      { setMoveCount, setMoveHistory, setSolved, setTimerRunning },
+      { moveCountRef, solvedRef, timerRunRef, startTimeRef }
+    )
+  }
+  three.renderer.render(three.scene, three.camera);
+}
     tick()
     return () => { cancelAnimationFrame(raf); three.dispose() }
   }, [])
@@ -165,6 +170,13 @@ export default function App() {
           onReset={reset}
           onToggleTimer={toggleTimer}
         />
+        <InstructionModal 
+  isOpen={modalData.isOpen} 
+  onClose={() => setModalData({ ...modalData, isOpen: false })}
+  algoTitle={modalData.title}
+  algorithm={modalData.algo}
+  setup={modalData.setup} // Dodajemo setup potez
+/>
 
         {/* Canvas */}
         <div className="canvas-area">
@@ -247,7 +259,11 @@ export default function App() {
         </div>
 
         {/* Right sidebar */}
-        <RightSidebar open={rightOpen} onExecAlgo={execAlgo} />
+       <RightSidebar 
+  open={rightOpen} 
+  onExecAlgo={execAlgo} 
+  onOpenHelper={openHelper} // DODAJ OVO
+/>
       </div>
     </div>
   )

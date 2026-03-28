@@ -1,534 +1,265 @@
-// Sidebar.jsx — Material Dark Redesign
-// Left: Stats / Controls / Keyboard Guide
-// Right: CFOP Checklist with collapsible algorithms
+import React, { useState } from 'react';
 
-import React, { useState } from 'react'
-
-// ─── CFOP DATA ────────────────────────────────────────────────────────────────
+// ─── DATA & STEPS (Sa dodatim SETUP potezima za kontekst) ─────────────────────
 
 const CFOP_STEPS = [
-  {
-    id: 'cross',
-    stage: '01',
-    title: 'Cross',
-    color: '#38bdf8',        // sky-400
-    bgColor: 'rgba(56,189,248,0.08)',
-    borderColor: 'rgba(56,189,248,0.25)',
-    description: 'Solve the white cross on the bottom layer.',
-    tasks: [
-      'Find all 4 white edge pieces',
-      'Align edges with center colors',
-      'Insert edges into bottom layer',
-      'Verify cross is complete',
-    ],
+{ 
+  id: 'cross', 
+  stage: '01', 
+  title: 'The White Cross', 
+  color: '#38bdf8', 
+  description: 'Building the "Daisy": Place 4 white edges around the yellow center.',
+  holding: 'Yellow center on TOP, White center on BOTTOM.',
+  tasks: [
+    'Find a White Edge piece', 
+    'Bring it to the Front face (Middle layer)', 
+    'Rotate it up to the Yellow top'
+  ], 
+  algos: [
+    { 
+      name: "Case: Edge on Front-Bottom", 
+      moves: "F L", 
+      setup: "B2 L2 D2 U' R2 U B2 D2 F2 L2 F' R' B L D' B2 L' U' F' R",
+      instruction: "If it's at the bottom, move F to bring it to the side, then R to bring it up."
+    }
+  ] 
+},
+ { 
+  id: 'corners', 
+  stage: '02', 
+  title: 'Solving the Corners', 
+  color: '#4ade80', 
+  description: 'Place the white corners to finish the first layer. Always match the side colors of the corner with the centers!',
+  holding: 'White Cross on BOTTOM. Target corner should be at Top-Front-Right.',
+  tasks: [
+    'Find a corner with White on it', 
+    'Rotate the Top layer (U) until it is above its correct spot', 
+    'Check where the White face is looking and use the right move'
+  ], 
+  algos: [
+    { 
+      name: 'White Facing YOU (Front)', 
+      moves: "F D F'", // Tvoja logika: obara stranu, ubacuje, vraća
+      setup: "R U R' U' B2 D2 L2 F2 U' R2 U' B2 L2 F2 D' B' L U2 R' F",
+      instruction: "If white is facing you, move the Front face to 'catch' it, then slide it in."
+    },
+    { 
+      name: 'White Facing RIGHT', 
+      moves: "R' D' R", // Tvoja logika
+      setup: "L' U' L U B2 D2 F2 R2 U B2 D2 L2 F2 U' R' B U2 L F'",
+      instruction: "If white is on the right, move the Right side down to pick it up."
+    },
+    { 
+      name: 'White Facing UP (Bottom Case)', 
+      moves: "R' D2 R D R' D' R", // Tvoja logika za izvlačenje i ubacivanje
+      setup: "D2 B2 L2 F2 R2 D2 U' L2 U' B2 R2 B' L D' B2 L' U' F' R",
+      instruction: "White is at the bottom or facing up? Use this to flip it and lock it in."
+    }
+  ] 
+},
+  { 
+    id: 'oll', 
+    stage: '03', 
+    title: 'Yellow Face (OLL)', 
+    color: '#fbbf24', 
+    description: 'Orient the top layer to be all yellow.',
+    holding: 'Yellow on TOP.',
+    tasks: ['Yellow Cross', 'Sune to finish'], 
     algos: [
-      { name: 'Daisy Method',  moves: "F U R U' R' F'" },
-      { name: 'Edge Flip',     moves: "F R U R' U' F'" },
-      { name: 'Cross Fix CW',  moves: "U F U' F'" },
-      { name: 'Cross Fix CCW', moves: "U R U' R'" },
-    ],
+      { 
+        name: 'Yellow Cross (Line)', 
+        moves: "F R U R' U' F'", 
+        setup: "R2 U2 B2 D2 F2 R2 U2 L2 B2 U' B' R' F U2 L' D2 B' R2 U" 
+      },
+      { 
+        name: 'Sune', 
+        moves: "R U R' U R U2 R'", 
+        setup: "R U2 R' U' R U' R' B2 D2 F2 L2 U' R2 D B2 L2 F2 U2 R'" 
+      }
+    ] 
   },
-  {
-    id: 'f2l',
-    stage: '02',
-    title: 'F2L',
-    color: '#4ade80',        // green-400
-    bgColor: 'rgba(74,222,128,0.08)',
-    borderColor: 'rgba(74,222,128,0.25)',
-    description: 'Insert corner-edge pairs into the first two layers.',
-    tasks: [
-      'Locate corner-edge pair',
-      'Set up pair above target slot',
-      'Insert right-side pair',
-      'Insert left-side pair',
-      'Repeat for all 4 slots',
-    ],
+  { 
+    id: 'pll', 
+    stage: '04', 
+    title: 'The Final Solve (PLL)', 
+    color: '#f87171', 
+    description: 'Final permutation of top layer.',
+    holding: 'Check for Headlights at the back.',
+    tasks: ['Permute Corners', 'Permute Edges'], 
     algos: [
-      { name: 'Right Insert',    moves: "U R U' R'" },
-      { name: 'Left Insert',     moves: "U' L' U L" },
-      { name: 'Right Slot Pair', moves: "R U R' U' R U R'" },
-      { name: 'Left Slot Pair',  moves: "L' U' L U L' U' L" },
-    ],
+      { 
+        name: 'T-Perm', 
+        moves: "R U R' U' R' F R2 U' R' U' R U R' F'", 
+        setup: "R U R' U' R' F R2 U' R' U' R U R' F' D2 B2 L2 U2 F2 R2" 
+      }
+    ] 
   },
-  {
-    id: 'oll',
-    stage: '03',
-    title: 'OLL',
-    color: '#fbbf24',        // amber-400
-    bgColor: 'rgba(251,191,36,0.08)',
-    borderColor: 'rgba(251,191,36,0.25)',
-    description: 'Orient all top-layer pieces — yellow face up.',
-    tasks: [
-      'Identify OLL case',
-      'Orient top edges (Line / L / Dot)',
-      'Orient top corners (Sune / Pi)',
-      'Verify all yellow faces point up',
-    ],
-    algos: [
-      { name: 'Line OLL',   moves: "F R U R' U' F'" },
-      { name: 'L-Shape',    moves: "F U R U' R' F'" },
-      { name: 'Sune',       moves: "R U R' U R U2 R'" },
-      { name: 'Anti-Sune',  moves: "R U2 R' U' R U' R'" },
-      { name: 'Dot OLL',    moves: "F R U R' U' F' B U L U' L' B'" },
-    ],
-  },
-  {
-    id: 'pll',
-    stage: '04',
-    title: 'PLL',
-    color: '#f87171',        // red-400
-    bgColor: 'rgba(248,113,113,0.08)',
-    borderColor: 'rgba(248,113,113,0.25)',
-    description: 'Permute all top-layer pieces to finish the solve.',
-    tasks: [
-      'Identify PLL case',
-      'Align top layer (AUF)',
-      'Execute PLL algorithm',
-      'Final AUF to complete',
-    ],
-    algos: [
-      { name: 'T-Perm',   moves: "R U R' U' R' F R2 U' R' U' R U R' F'" },
-      { name: 'U-Perm A', moves: "R U' R U R U R U' R' U' R2" },
-      { name: 'U-Perm B', moves: "R2 U R U R' U' R' U' R' U R'" },
-      { name: 'J-Perm A', moves: "R U R' F' R U R' U' R' F R2 U' R'" },
-      { name: 'Y-Perm',   moves: "F R U' R' U' R U R' F' R U R' U' R' F R F'" },
-    ],
-  },
-]
-
-// ─── KEYBOARD MAP ─────────────────────────────────────────────────────────────
+];
 
 const KEY_MAPPINGS = [
-  { key: 'R', mod: false, move: 'R'  }, { key: 'R', mod: true,  move: "R'" },
-  { key: 'L', mod: false, move: 'L'  }, { key: 'L', mod: true,  move: "L'" },
-  { key: 'U', mod: false, move: 'U'  }, { key: 'U', mod: true,  move: "U'" },
-  { key: 'D', mod: false, move: 'D'  }, { key: 'D', mod: true,  move: "D'" },
-  { key: 'F', mod: false, move: 'F'  }, { key: 'F', mod: true,  move: "F'" },
-  { key: 'B', mod: false, move: 'B'  }, { key: 'B', mod: true,  move: "B'" },
-]
+  { key: 'R', move: 'R' }, { key: 'L', move: 'L' }, { key: 'U', move: 'U' },
+  { key: 'D', move: 'D' }, { key: 'F', move: 'F' }, { key: 'B', move: 'B' },
+];
 
-// ─── LEFT SIDEBAR ─────────────────────────────────────────────────────────────
+// ─── LEFT SIDEBAR COMPONENT ───────────────────────────────────────────────────
 
-export function LeftSidebar({
-  open, time, moveCount, timerRunning, onScramble, onReset, onToggleTimer
-}) {
+export function LeftSidebar({ open, time, moveCount, timerRunning, onScramble, onReset, onToggleTimer }) {
   return (
-    <aside className={`sidebar left ${open ? 'visible' : ''}`}>
-      <div className="sidebar-inner">
+    <aside className={`sidebar left ${open ? 'visible' : ''}`} style={{ 
+      width: '300px', background: '#0f1115', borderRight: '1px solid rgba(255,255,255,0.05)', height: '100vh' 
+    }}>
+      <div style={{ padding: '24px' }}>
+        <h2 style={{ fontSize: '18px', fontWeight: '900', color: '#fff', letterSpacing: '1px', marginBottom: '30px' }}>
+          CUBE<span style={{ color: '#38bdf8' }}>PRO</span>
+        </h2>
 
-        {/* ── Stats ── */}
-        <div>
-          <div className="section-label">Statistics</div>
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div
-                className={`stat-value ${timerRunning ? 'running' : ''}`}
-                style={{ fontVariantNumeric: 'tabular-nums' }}
-              >
-                {time}
-              </div>
-              <div className="stat-label">Time</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-value orange">{moveCount}</div>
-              <div className="stat-label">Moves</div>
-            </div>
+        <div style={{ background: '#1a1d23', borderRadius: '16px', padding: '20px', textAlign: 'center', marginBottom: '24px' }}>
+          <div style={{ fontSize: '36px', fontWeight: '700', color: timerRunning ? '#38bdf8' : '#fff', fontFamily: 'monospace' }}>
+            {time}
+          </div>
+          <div style={{ fontSize: '12px', color: '#666', marginTop: '4px', letterSpacing: '2px' }}>TIMER</div>
+          <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid rgba(255,255,255,0.05)', color: '#fff' }}>
+             <span style={{ fontSize: '18px', fontWeight: 'bold' }}>{moveCount}</span> <span style={{ fontSize: '10px', color: '#666' }}>MOVES</span>
           </div>
         </div>
 
-        {/* ── Controls ── */}
-        <div>
-          <div className="section-label">Controls</div>
-          <button className="btn primary" onClick={onScramble}>
-            <span>⟳</span> Scramble
-          </button>
-          <button className="btn danger" onClick={onReset}>
-            <span>↺</span> Reset Cube
-          </button>
-          <button className="btn success" onClick={onToggleTimer}>
-            <span>{timerRunning ? '⏸' : '▶'}</span>
-            {timerRunning ? 'Pause Timer' : 'Start Timer'}
-          </button>
-        </div>
-
-        {/* ── Keyboard ── */}
-        <div>
-          <div className="section-label">Keyboard Controls</div>
-          <div className="keymap-grid">
-            {KEY_MAPPINGS.map(({ key, mod, move }) => (
-              <div className="key-item" key={move}>
-                <span className="key-badge">
-                  {mod ? `⇧${key}` : key}
-                </span>
-                <span className="key-move">{move}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ── Mouse ── */}
-        <div>
-          <div className="section-label">Mouse & Touch</div>
-          <div
-            style={{
-              background: 'var(--bg-panel)',
-              borderRadius: 'var(--radius-md)',
-              padding: '12px 14px',
-            }}
-          >
-            {[
-              ['🖱', 'Click & drag', 'Rotate view'],
-              ['📱', 'Touch & drag', 'Rotate view'],
-            ].map(([icon, label, desc]) => (
-              <div
-                key={label}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  padding: '5px 0',
-                  borderBottom: '1px solid var(--border-subtle)',
-                }}
-              >
-                <span style={{ fontSize: 14 }}>{icon}</span>
-                <div>
-                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500 }}>
-                    {label}
-                  </div>
-                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{desc}</div>
-                </div>
-              </div>
-            ))}
-            <div style={{ paddingTop: 8, fontSize: 11, color: 'var(--text-tertiary)', lineHeight: 1.6 }}>
-              Hold <span style={{ color: 'var(--blue-400)', fontFamily: 'var(--font-mono)' }}>Shift</span> + key for counter-clockwise moves
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </aside>
-  )
-}
-
-// ─── RIGHT SIDEBAR ────────────────────────────────────────────────────────────
-
-export function RightSidebar({ open, onExecAlgo }) {
-  const [checked,   setChecked]   = useState({})
-  const [openAlgos, setOpenAlgos] = useState({})
-
-  const toggleCheck   = (key) => setChecked(p => ({ ...p, [key]: !p[key] }))
-  const toggleAlgos   = (id)  => setOpenAlgos(p => ({ ...p, [id]: !p[id] }))
-  const resetChecks   = ()    => setChecked({})
-  const isStageDone   = (s)   => s.tasks.every((_, i) => checked[`${s.id}-${i}`])
-
-  const totalTasks  = CFOP_STEPS.reduce((sum, s) => sum + s.tasks.length, 0)
-  const doneTasks   = Object.values(checked).filter(Boolean).length
-  const progressPct = Math.round((doneTasks / totalTasks) * 100)
-
-  return (
-    <aside className={`sidebar right ${open ? 'visible' : ''}`}>
-      <div className="sidebar-inner">
-
-        {/* ── Progress header ── */}
-        <div>
-          <div className="section-label">CFOP Progress</div>
-
-          {/* Overall progress bar */}
-          <div style={{ marginBottom: 12 }}>
-            <div style={{
-              display: 'flex', justifyContent: 'space-between',
-              marginBottom: 6, fontSize: 11,
-              color: 'var(--text-tertiary)',
-              fontFamily: 'var(--font-mono)',
-            }}>
-              <span>Overall</span>
-              <span style={{
-                color: progressPct === 100 ? 'var(--emerald-400)' : 'var(--text-secondary)',
-                fontWeight: 500,
-              }}>
-                {doneTasks} / {totalTasks}
-              </span>
-            </div>
-            <div className="progress-bar-track">
-              <div
-                className="progress-bar-fill"
-                style={{
-                  width: `${progressPct}%`,
-                  background: progressPct === 100
-                    ? 'var(--emerald-500)'
-                    : 'linear-gradient(90deg, var(--blue-500), var(--teal-500))',
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Stage pills row */}
-          <div style={{ display: 'flex', gap: 5, marginBottom: 12 }}>
-            {CFOP_STEPS.map(step => {
-              const done = isStageDone(step)
-              return (
-                <div
-                  key={step.id}
-                  className="stage-pill"
-                  style={{
-                    background: done ? step.bgColor : 'var(--bg-panel)',
-                    border: `1px solid ${done ? step.borderColor : 'var(--border-subtle)'}`,
-                    color: done ? step.color : 'var(--text-tertiary)',
-                  }}
-                >
-                  {done ? '✓' : step.title}
-                </div>
-              )
-            })}
-          </div>
-
-          {/* Reset progress */}
-          <button className="btn ghost" style={{ marginBottom: 0 }} onClick={resetChecks}>
-            ↺ Reset Progress
-          </button>
-        </div>
-
-        {/* ── Step cards ── */}
-        <div>
-          <div className="section-label">Steps</div>
-          {CFOP_STEPS.map(step => (
-            <StepCard
-              key={step.id}
-              step={step}
-              checked={checked}
-              onToggleCheck={toggleCheck}
-              stageDone={isStageDone(step)}
-              algoOpen={!!openAlgos[step.id]}
-              onToggleAlgos={() => toggleAlgos(step.id)}
-              onExecAlgo={onExecAlgo}
-            />
-          ))}
-        </div>
-
-        {/* Solved all */}
-        {progressPct === 100 && (
-          <div style={{
-            padding: 18,
-            textAlign: 'center',
-            background: 'rgba(16,185,129,0.08)',
-            border: '1px solid rgba(16,185,129,0.25)',
-            borderRadius: 'var(--radius-lg)',
-          }}>
-            <div style={{
-              fontSize: 24, marginBottom: 6,
-            }}>🎉</div>
-            <div style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 13,
-              fontWeight: 600,
-              color: 'var(--emerald-400)',
-              letterSpacing: '0.05em',
-              marginBottom: 4,
-            }}>
-              All Steps Complete
-            </div>
-            <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-              Now execute the solve!
-            </div>
-          </div>
-        )}
-
-        {/* Notation footer */}
-        <div style={{
-          padding: '12px 14px',
-          background: 'var(--bg-panel)',
-          borderRadius: 'var(--radius-md)',
-          fontSize: 11,
-          color: 'var(--text-tertiary)',
-          fontFamily: 'var(--font-mono)',
-          lineHeight: 2,
-        }}>
-          R=Right · L=Left · U=Up<br />
-          D=Down · F=Front · B=Back<br />
-          <span style={{ color: 'var(--blue-400)' }}>'</span> = counter-clockwise &nbsp;
-          <span style={{ color: 'var(--blue-400)' }}>2</span> = double move
-        </div>
-
-      </div>
-    </aside>
-  )
-}
-
-// ─── STEP CARD ────────────────────────────────────────────────────────────────
-
-function StepCard({ step, checked, onToggleCheck, stageDone, algoOpen, onToggleAlgos, onExecAlgo }) {
-  const doneCount = step.tasks.filter((_, i) => checked[`${step.id}-${i}`]).length
-
-  return (
-    <div
-      className="step-card"
-      style={{
-        background: stageDone ? step.bgColor : 'var(--bg-panel)',
-        border: `1px solid ${stageDone ? step.borderColor : 'var(--border-subtle)'}`,
-      }}
-    >
-      {/* Header */}
-      <div
-        className="step-header"
-        style={{
-          background: stageDone ? `${step.bgColor}` : 'var(--bg-elevated)',
-          borderBottom: `1px solid ${stageDone ? step.borderColor : 'var(--border-subtle)'}`,
-        }}
-      >
-        {/* Number badge */}
-        <div
-          className="step-number"
-          style={{
-            background: stageDone ? step.color : 'var(--bg-inset)',
-            border: `1.5px solid ${stageDone ? step.color : 'var(--border-default)'}`,
-            color: stageDone ? '#000' : step.color,
-            fontWeight: stageDone ? 700 : 600,
+        <button 
+          onClick={onToggleTimer} 
+          style={{ 
+            width: '100%', padding: '14px', borderRadius: '12px', background: timerRunning ? '#f87171' : '#38bdf8', 
+            border: 'none', fontWeight: '800', cursor: 'pointer', marginBottom: '12px', color: '#000'
           }}
         >
-          {stageDone ? '✓' : step.stage}
+          {timerRunning ? 'STOP TIMER' : 'START SOLVE'}
+        </button>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '30px' }}>
+          <button onClick={onScramble} style={{ background: '#1a1d23', color: '#fff', border: '1px solid #333', padding: '10px', borderRadius: '10px', cursor: 'pointer' }}>Scramble</button>
+          <button onClick={onReset} style={{ background: '#1a1d23', color: '#f87171', border: '1px solid #333', padding: '10px', borderRadius: '10px', cursor: 'pointer' }}>Reset</button>
         </div>
 
-        {/* Title + count */}
-        <div style={{ flex: 1 }}>
-          <div style={{
-            fontSize: 14,
-            fontWeight: 600,
-            color: stageDone ? step.color : 'var(--text-primary)',
-            letterSpacing: '0.01em',
-            textDecoration: stageDone ? 'line-through' : 'none',
-            opacity: stageDone ? 0.75 : 1,
-          }}>
-            {step.title}
-          </div>
-          <div style={{
-            fontSize: 11,
-            color: 'var(--text-tertiary)',
-            fontFamily: 'var(--font-mono)',
-            marginTop: 1,
-          }}>
-            {doneCount} / {step.tasks.length} tasks
-          </div>
-        </div>
-
-        {/* Progress dots */}
-        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-          {step.tasks.map((_, i) => (
-            <div
-              key={i}
-              style={{
-                width: 6, height: 6,
-                borderRadius: '50%',
-                background: checked[`${step.id}-${i}`] ? step.color : 'var(--border-default)',
-                transition: 'background 0.2s',
-              }}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* Description */}
-      <div style={{
-        padding: '8px 14px',
-        fontSize: 12,
-        color: 'var(--text-tertiary)',
-        borderBottom: `1px solid var(--border-subtle)`,
-        lineHeight: 1.5,
-      }}>
-        {step.description}
-      </div>
-
-      {/* Tasks */}
-      {step.tasks.map((task, i) => {
-        const key    = `${step.id}-${i}`
-        const isDone = !!checked[key]
-        return (
-          <div
-            key={key}
-            className="step-task-row"
-            onClick={() => onToggleCheck(key)}
-            style={{
-              opacity: isDone ? 0.55 : 1,
-            }}
-          >
-            {/* Checkbox */}
-            <div
-              className={`cb-box ${isDone ? 'checked' : ''}`}
-              style={{
-                borderColor: isDone ? 'var(--blue-500)' : 'var(--border-strong)',
-              }}
-            >
-              {isDone && '✓'}
+        <div style={{ color: '#444', fontSize: '10px', fontWeight: '800', letterSpacing: '1px', marginBottom: '12px' }}>KEYBOARD CONTROLS</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+          {KEY_MAPPINGS.map(m => (
+            <div key={m.key} style={{ background: '#1a1d23', padding: '8px', borderRadius: '8px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.03)' }}>
+              <span style={{ fontSize: '12px', color: '#38bdf8', fontWeight: '700' }}>{m.key}</span>
             </div>
-
-            {/* Text */}
-            <span style={{
-              fontSize: 12,
-              color: isDone ? 'var(--text-tertiary)' : 'var(--text-secondary)',
-              textDecoration: isDone ? 'line-through' : 'none',
-              lineHeight: 1.4,
-              flex: 1,
-            }}>
-              {task}
-            </span>
-          </div>
-        )
-      })}
-
-      {/* Algo toggle */}
-      <button
-        className="algo-toggle-btn"
-        onClick={onToggleAlgos}
-        style={{
-          marginTop: 8,
-          color: algoOpen ? step.color : undefined,
-          borderColor: algoOpen ? step.borderColor : undefined,
-          background: algoOpen ? step.bgColor : undefined,
-        }}
-      >
-        <span style={{ fontSize: 9 }}>{algoOpen ? '▲' : '▼'}</span>
-        {algoOpen ? 'Hide' : 'Show'} algorithms ({step.algos.length})
-      </button>
-
-      {/* Algorithms */}
-      {algoOpen && (
-        <div style={{ padding: '0 14px 12px' }}>
-          {step.algos.map(algo => (
-            <AlgoRow
-              key={algo.name}
-              algo={algo}
-              color={step.color}
-              onRun={onExecAlgo}
-            />
           ))}
         </div>
-      )}
-    </div>
-  )
+      </div>
+    </aside>
+  );
 }
 
-// ─── ALGO ROW ─────────────────────────────────────────────────────────────────
+// ─── RIGHT SIDEBAR COMPONENT ──────────────────────────────────────────────────
 
-function AlgoRow({ algo, color, onRun }) {
-  const [copied, setCopied] = useState(false)
+export function RightSidebar({ open, onExecAlgo, onOpenHelper }) {
+  const [checked, setChecked] = useState({});
+  const [openAlgos, setOpenAlgos] = useState({});
 
-  const handleCopy = () => {
-    navigator.clipboard?.writeText(algo.moves).catch(() => {})
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1200)
-  }
+  const toggleCheck = (key) => setChecked(p => ({ ...p, [key]: !p[key] }));
+  const toggleAlgos = (id) => setOpenAlgos(p => ({ ...p, [id]: !p[id] }));
 
   return (
-    <div className="algo-row">
-      <div className="algo-name-text">{algo.name}</div>
-      <div className="algo-moves-text">{algo.moves}</div>
-      <div style={{ display: 'flex', gap: 5 }}>
-        <button className="algo-exec run" onClick={() => onRun(algo.moves)}>
-          ▶ Run
-        </button>
-        <button className="algo-exec copy" onClick={handleCopy}>
-          {copied ? '✓ Copied' : '⎘ Copy'}
-        </button>
+    <aside className={`sidebar right ${open ? 'visible' : ''}`} style={{ 
+      width: '360px', background: '#0f1115', borderLeft: '1px solid rgba(255,255,255,0.05)', height: '100vh', overflowY: 'auto'
+    }}>
+      <div style={{ padding: '24px' }}>
+        
+        <header style={{ marginBottom: '24px' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: '800', color: '#fff', margin: 0 }}>HOW TO SOLVE</h2>
+          <p style={{ fontSize: '12px', color: '#555', marginTop: '4px' }}>Follow Step 01 to 04</p>
+        </header>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {CFOP_STEPS.map((step) => {
+            const isDone = step.tasks.every((_, i) => checked[`${step.id}-${i}`]);
+            const isOpen = !!openAlgos[step.id];
+
+            return (
+              <div key={step.id} style={{
+                background: isDone ? 'rgba(74, 222, 128, 0.03)' : '#16191e',
+                borderRadius: '16px',
+                border: `1px solid ${isDone ? '#4ade8055' : 'rgba(255,255,255,0.05)'}`,
+                transition: 'all 0.3s'
+              }}>
+                <div style={{ padding: '16px', borderBottom: '1px solid rgba(255,255,255,0.03)', display: 'flex', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ fontSize: '10px', fontWeight: '900', color: step.color }}>STEP {step.stage}</div>
+                    <div style={{ fontSize: '15px', fontWeight: '700', color: isDone ? '#4ade80' : '#fff' }}>{step.title}</div>
+                  </div>
+                  {isDone && <span style={{ color: '#4ade80' }}>✓</span>}
+                </div>
+
+                <div style={{ padding: '16px' }}>
+                  <div style={{ background: '#000', padding: '12px', borderRadius: '10px', marginBottom: '15px', borderLeft: `3px solid ${step.color}` }}>
+                    <div style={{ fontSize: '11px', color: '#fff', fontWeight: '700', marginBottom: '4px' }}>GOAL:</div>
+                    <div style={{ fontSize: '12px', color: '#888', lineHeight: '1.4' }}>{step.description}</div>
+                    <div style={{ marginTop: '10px', fontSize: '11px', color: step.color, fontWeight: '700' }}>📍 {step.holding}</div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {step.tasks.map((task, i) => (
+                      <div 
+                        key={i} 
+                        onClick={() => toggleCheck(`${step.id}-${i}`)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', opacity: checked[`${step.id}-${i}`] ? 0.3 : 1 }}
+                      >
+                        <div style={{ width: '16px', height: '16px', borderRadius: '4px', border: `1px solid ${step.color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: step.color }}>
+                          {checked[`${step.id}-${i}`] && '✓'}
+                        </div>
+                        <span style={{ fontSize: '12px', color: '#ccc' }}>{task}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button 
+                    onClick={() => toggleAlgos(step.id)}
+                    style={{ 
+                      width: '100%', marginTop: '15px', padding: '10px', borderRadius: '8px', 
+                      background: isOpen ? step.color : 'rgba(255,255,255,0.03)', color: isOpen ? '#000' : '#888',
+                      border: 'none', fontSize: '11px', fontWeight: '700', cursor: 'pointer' 
+                    }}
+                  >
+                    {isOpen ? 'CLOSE MOVES' : `VIEW MOVES (${step.algos.length})`}
+                  </button>
+
+                  {isOpen && (
+                    <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {step.algos.map((algo, idx) => (
+                        <div key={idx} style={{ background: '#0a0c10', padding: '12px', borderRadius: '10px' }}>
+                          <div style={{ fontSize: '10px', color: '#555', marginBottom: '4px', fontWeight: '700' }}>{algo.name}</div>
+                          <div style={{ fontSize: '14px', fontFamily: 'monospace', color: '#fff', textAlign: 'center', marginBottom: '10px' }}>{algo.moves}</div>
+                          
+                          {/* GLAVNA PROMENA: Pozivamo onOpenHelper umesto onExecAlgo za tutorijal */}
+                          <button 
+                            onClick={() => onOpenHelper(algo.name, algo.moves, algo.setup || "")}
+                            style={{ 
+                              width: '100%', padding: '8px', background: '#38bdf8', color: '#000', 
+                              border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: '900', cursor: 'pointer' 
+                            }}
+                          >
+                            SHOW EXAMPLE
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div style={{ marginTop: '30px', padding: '15px', background: '#1a1d23', borderRadius: '12px', color: '#444' }}>
+          <div style={{ fontSize: '10px', fontWeight: '800', marginBottom: '10px', color: '#666' }}>NOTATION CHEAT SHEET</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px', fontSize: '11px' }}>
+              <span><strong>R</strong>: Right</span> <span><strong>L</strong>: Left</span>
+              <span><strong>U</strong>: Top</span> <span><strong>F</strong>: Front</span>
+              <span><strong>'</strong>: Inverse</span> <span><strong>2</strong>: Double</span>
+          </div>
+        </div>
       </div>
-    </div>
-  )
+    </aside>
+  );
 }

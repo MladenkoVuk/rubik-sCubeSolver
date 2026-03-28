@@ -64,15 +64,14 @@ export function createCubies(scene) {
         const geometry = new THREE.BoxGeometry(0.93, 0.93, 0.93);
 
         // Determine face colors based on grid position
-        const faceColors = [
-          x ===  1 ? COLORS.blue   : COLORS.black,   // +X face
-          x === -1 ? COLORS.green  : COLORS.black,   // -X face
-          y ===  1 ? COLORS.white  : COLORS.black,   // +Y face
-          y === -1 ? COLORS.yellow : COLORS.black,   // -Y face
-          z ===  1 ? COLORS.orange : COLORS.black,   // +Z face
-          z === -1 ? COLORS.red    : COLORS.black,   // -Z face
-        ];
-
+       const faceColors = [
+  x ===  1 ? COLORS.red    : COLORS.black,   // +X (Desno - Red)
+  x === -1 ? COLORS.orange : COLORS.black,   // -X (Levo - Orange)
+  y ===  1 ? COLORS.white  : COLORS.black,   // +Y (Gore - White)
+  y === -1 ? COLORS.yellow : COLORS.black,   // -Y (Dole - Yellow)
+  z ===  1 ? COLORS.green  : COLORS.black,   // +Z (Napred - Green)
+  z === -1 ? COLORS.blue   : COLORS.black,   // -Z (Pozadi - Blue)
+];
         const materials = faceColors.map(hex =>
           new THREE.MeshStandardMaterial({
             color:     hex,
@@ -174,82 +173,102 @@ export function checkColorsSolved(cubies) {
  * Returns { renderer, scene, camera, getRotation(), dispose() }.
  */
 export function initThree(canvas) {
-  // Renderer
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.shadowMap.enabled  = true;
-  renderer.shadowMap.type     = THREE.PCFSoftShadowMap;
+  // 1. Renderer sa antialiasing-om (pegla ivice) i podrškom za visoku gustinu piksela
+  const renderer = new THREE.WebGLRenderer({ 
+    canvas, 
+    antialias: true, 
+    alpha: true 
+  });
+  
+  // Postavlja rezoluciju prema tvom ekranu (Retina/4K podrška)
+  const pixelRatio = Math.min(window.devicePixelRatio, 2);
+  renderer.setPixelRatio(pixelRatio);
+  
+  // Početna veličina na osnovu CSS-a
+  renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
 
-  // Scene
   const scene = new THREE.Scene();
 
-  // Camera
+  // 2. Kamera - postavljena tako da kocka bude u fokusu
   const camera = new THREE.PerspectiveCamera(
-    45,
-    canvas.clientWidth / canvas.clientHeight,
-    0.1, 100
+    45, 
+    canvas.clientWidth / canvas.clientHeight, 
+    0.1, 
+    100
   );
-  camera.position.set(4.5, 3.5, 5.5);
+  camera.position.set(0, 0, 7.5); // Malo dalje za bolji pregled
   camera.lookAt(0, 0, 0);
 
-  // Lighting: ambient + directional key light + two accent point lights
-  const ambient = new THREE.AmbientLight(0xffffff, 0.6);
-  scene.add(ambient);
+  // 3. Osvetljenje - pojačano da boje budu jasne
+  scene.add(new THREE.AmbientLight(0xffffff, 0.9));
+  const mainLight = new THREE.DirectionalLight(0xffffff, 1.2);
+  mainLight.position.set(5, 10, 7);
+  scene.add(mainLight);
 
-  const key = new THREE.DirectionalLight(0xffffff, 1.2);
-  key.position.set(5, 8, 6);
-  key.castShadow = true;
-  scene.add(key);
-
-  // Subtle colored rim lights for depth
-  const rimA = new THREE.PointLight(0x00d4ff, 0.35, 20);
-  rimA.position.set(-5,  5, -5);
-  scene.add(rimA);
-
-  const rimB = new THREE.PointLight(0x7c3aed, 0.25, 20);
-  rimB.position.set( 5, -5,  5);
-  scene.add(rimB);
-
-  // ── Manual Orbit Control ────────────────────────────────────────────────────
-  // Stores euler angles that are applied to scene.rotation each frame.
+  // 4. Logika za rotaciju celog sveta (Quaternions)
   let isDragging = false;
-  let prevMouse  = { x: 0, y: 0 };
-  let rotX = 0.40;  // slight top-down tilt
-  let rotY = 0.60;  // slight left-right rotation
+  let prevMouse = { x: 0, y: 0 };
+  
+  // targetQuaternion je gde želimo da kocka bude, current je gde je trenutno (za glatkoću)
+  const targetQuaternion = new THREE.Quaternion();
+  const currentQuaternion = new THREE.Quaternion();
 
-  const onStart = (x, y) => { isDragging = true; prevMouse = { x, y }; };
-  const onMove  = (x, y) => {
+  const onMove = (x, y) => {
     if (!isDragging) return;
-    rotY += (x - prevMouse.x) * 0.008;
-    rotX += (y - prevMouse.y) * 0.008;
-    rotX  = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, rotX));
+
+    // Osetljivost miša - smanji ako ti je prebrzo
+    const deltaX = (x - prevMouse.x) * 0.006;
+    const deltaY = (y - prevMouse.y) * 0.006;
+
+    // Kreiramo rotaciju oko X i Y osa
+    const deltaRotation = new THREE.Quaternion()
+      .setFromEuler(new THREE.Euler(deltaY, deltaX, 0, 'XYZ'));
+
+    // Množimo da bismo akumulirali rotaciju bez limita
+    targetQuaternion.multiplyQuaternions(deltaRotation, targetQuaternion);
+
     prevMouse = { x, y };
   };
-  const onEnd   = () => { isDragging = false; };
 
-  canvas.addEventListener('mousedown',  e => onStart(e.clientX, e.clientY));
-  canvas.addEventListener('touchstart', e => onStart(e.touches[0].clientX, e.touches[0].clientY));
-  canvas.addEventListener('mousemove',  e => onMove(e.clientX, e.clientY));
-  canvas.addEventListener('touchmove',  e => { onMove(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); }, { passive: false });
-  window.addEventListener('mouseup',    onEnd);
-  window.addEventListener('touchend',   onEnd);
+  // Event listeneri (Miš + Touch za mobilne)
+  canvas.addEventListener('mousedown', e => { isDragging = true; prevMouse = { x: e.clientX, y: e.clientY }; });
+  window.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
+  window.addEventListener('mouseup', () => isDragging = false);
 
-  // ── Responsive Resize ───────────────────────────────────────────────────────
+  canvas.addEventListener('touchstart', e => { 
+    isDragging = true; 
+    prevMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY }; 
+  }, { passive: false });
+  window.addEventListener('touchmove', e => {
+    onMove(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: false });
+  window.addEventListener('touchend', () => isDragging = false);
+
+  // 5. Resize Observer - da slika ostane oštra kad menjaš veličinu prozora
   const handleResize = () => {
-    const w = canvas.clientWidth, h = canvas.clientHeight;
-    renderer.setSize(w, h, false);
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
+    renderer.setSize(w, h, false);
   };
-  const ro = new ResizeObserver(handleResize);
-  ro.observe(canvas);
-  handleResize();
+
+  const resizeObserver = new ResizeObserver(handleResize);
+  resizeObserver.observe(canvas);
 
   return {
-    renderer,
-    scene,
+    renderer, 
+    scene, 
     camera,
-    getRotation: () => ({ x: rotX, y: rotY }),
-    dispose: () => { ro.disconnect(); renderer.dispose(); },
+    // Ova funkcija se poziva u App.jsx tick() petlji
+    update: () => {
+      // Slerp vrši glatko "pretapanje" rotacije (0.15 je faktor inercije)
+      currentQuaternion.slerp(targetQuaternion, 0.15);
+      scene.quaternion.copy(currentQuaternion);
+    },
+    dispose: () => {
+      renderer.dispose();
+      resizeObserver.disconnect();
+    }
   };
 }
