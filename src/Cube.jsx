@@ -25,18 +25,29 @@ export const COLORS = {
 // dir   : +1 = clockwise (right-hand rule), -1 = counter-clockwise
 
 export const MOVES = {
-  'R':  { axis: 'x', layer:  1, dir:  1 },
-  "R'": { axis: 'x', layer:  1, dir: -1 },
-  'L':  { axis: 'x', layer: -1, dir: -1 },
-  "L'": { axis: 'x', layer: -1, dir:  1 },
-  'U':  { axis: 'y', layer:  1, dir:  1 },
-  "U'": { axis: 'y', layer:  1, dir: -1 },
-  'D':  { axis: 'y', layer: -1, dir: -1 },
-  "D'": { axis: 'y', layer: -1, dir:  1 },
-  'F':  { axis: 'z', layer:  1, dir:  1 },
-  "F'": { axis: 'z', layer:  1, dir: -1 },
-  'B':  { axis: 'z', layer: -1, dir: -1 },
-  "B'": { axis: 'z', layer: -1, dir:  1 },
+  // R: Desno (x: 1) - R ide gore, R' ide dole
+  'R':  { axis: 'x', layer:  1, dir: -1 }, 
+  "R'": { axis: 'x', layer:  1, dir:  1 },
+
+  // L: Levo (x: -1) - L ide dole, L' ide gore
+  'L':  { axis: 'x', layer: -1, dir:  1 },
+  "L'": { axis: 'x', layer: -1, dir: -1 },
+
+  // U: Gore (y: 1) - U ide ulevo, U' udesno
+  'U':  { axis: 'y', layer:  1, dir: -1 },
+  "U'": { axis: 'y', layer:  1, dir:  1 },
+
+  // D: Dole (y: -1) - D ide udesno, D' ulevo
+  'D':  { axis: 'y', layer: -1, dir:  1 },
+  "D'": { axis: 'y', layer: -1, dir: -1 },
+
+  // F: Napred (z: 1) - F ide u smeru kazaljke
+  'F':  { axis: 'z', layer:  1, dir: -1 },
+  "F'": { axis: 'z', layer:  1, dir:  1 },
+
+  // B: Pozadi (z: -1) - B ide u smeru kazaljke (gledano od pozadi)
+  'B':  { axis: 'z', layer: -1, dir:  1 },
+  "B'": { axis: 'z', layer: -1, dir: -1 },
 };
 
 // ─── MESH GENERATION ───────────────────────────────────────────────────────────

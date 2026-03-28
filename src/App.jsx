@@ -31,6 +31,7 @@ export default function App() {
   const openHelper = (title, algo, setup = "") => {
   setModalData({ isOpen: true, title, algo, setup });
 };
+
   // ── Three.js init ──────────────────────────────────────────────────────────
   useEffect(() => {
     const canvas = canvasRef.current
@@ -175,7 +176,7 @@ const tick = () => {
   onClose={() => setModalData({ ...modalData, isOpen: false })}
   algoTitle={modalData.title}
   algorithm={modalData.algo}
-  setup={modalData.setup} // Dodajemo setup potez
+  setup={modalData.setup} 
 />
 
         {/* Canvas */}

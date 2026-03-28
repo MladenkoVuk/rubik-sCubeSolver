@@ -18,8 +18,8 @@ const CFOP_STEPS = [
   algos: [
     { 
       name: "Case: Edge on Front-Bottom", 
-      moves: "F L", 
-      setup: "B2 L2 D2 U' R2 U B2 D2 F2 L2 F' R' B L D' B2 L' U' F' R",
+      moves: "F R'", 
+      setup: "B2 L2 D2 U' R2 U B2 D2 F2 L2 F' R' B L D' R F D B F' U' L' D R F R",
       instruction: "If it's at the bottom, move F to bring it to the side, then R to bring it up."
     }
   ] 
@@ -29,31 +29,34 @@ const CFOP_STEPS = [
   stage: '02', 
   title: 'Solving the Corners', 
   color: '#4ade80', 
-  description: 'Place the white corners to finish the first layer. Always match the side colors of the corner with the centers!',
-  holding: 'White Cross on BOTTOM. Target corner should be at Top-Front-Right.',
+  description: 'White Cross is done and on TOP. Now we fill the 4 corners.',
+  holding: 'White Cross on TOP. Front facing YOU.',
   tasks: [
-    'Find a corner with White on it', 
-    'Rotate the Top layer (U) until it is above its correct spot', 
-    'Check where the White face is looking and use the right move'
+    'Find a corner piece with White on it in the bottom layer', 
+    'Use D moves to place it directly UNDER its spot', 
+    'Look at the White sticker and use the matching move'
   ], 
   algos: [
     { 
-      name: 'White Facing YOU (Front)', 
-      moves: "F D F'", // Tvoja logika: obara stranu, ubacuje, vraća
-      setup: "R U R' U' B2 D2 L2 F2 U' R2 U' B2 L2 F2 D' B' L U2 R' F",
-      instruction: "If white is facing you, move the Front face to 'catch' it, then slide it in."
+      name: 'White Facing FRONT', 
+      moves: "F D F'", 
+      // SETUP: Prvo složi krst, pa izbaci ćošak tako da bela gleda NAPRED
+      setup: "R' D' R L D L' B' D' B D' F D' F' D' L D L' R' D D R D", 
+      instruction: "Front side down, Bottom right, Front side up."
     },
     { 
       name: 'White Facing RIGHT', 
-      moves: "R' D' R", // Tvoja logika
-      setup: "L' U' L U B2 D2 F2 R2 U B2 D2 L2 F2 U' R' B U2 L F'",
-      instruction: "If white is on the right, move the Right side down to pick it up."
+      moves: "R' D' R", 
+      // SETUP: Prvo složi krst, pa izbaci ćošak tako da bela gleda DESNO
+      setup: "R' D' R L D L' B' D' B D' F D' F' D' L D L'", 
+      instruction: "Right side down, Bottom left, Right side up."
     },
     { 
-      name: 'White Facing UP (Bottom Case)', 
-      moves: "R' D2 R D R' D' R", // Tvoja logika za izvlačenje i ubacivanje
-      setup: "D2 B2 L2 F2 R2 D2 U' L2 U' B2 R2 B' L D' B2 L' U' F' R",
-      instruction: "White is at the bottom or facing up? Use this to flip it and lock it in."
+      name: 'White Facing BOTTOM', 
+      moves: "R' D D R D R' D' R", 
+      // SETUP: Prvo složi krst, pa izbaci ćošak tako da bela gleda u POD
+      setup: "R' D' R L D L' B' D' B D' F D' F' D' L D L' R' D D R D R' D R D D", 
+      instruction: "Double bottom turn to flip the white sticker to the side, then insert."
     }
   ] 
 },
