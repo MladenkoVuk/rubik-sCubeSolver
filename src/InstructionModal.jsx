@@ -140,7 +140,7 @@ console.log("MODAL PROVERA:", { title: algoTitle, isYellowTop });
   if (!isOpen) return null;
 
   const titleLower = algoTitle?.toLowerCase() || "";
-  const isYellow = titleLower.includes("daisy") || titleLower.includes("edge");
+  const isYellow = titleLower.includes("cross") || titleLower.includes("edge");
 
   return (
     <div style={styles.overlay}>

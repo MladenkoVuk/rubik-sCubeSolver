@@ -65,23 +65,34 @@ export function getMappedMove(moveName, frontColor, cubies) {
   const isYellowTop = worldPos.y < -0.1;
 
   // 4. TVOJA LOGIKA ZA FRONT (Horizontalno mapiranje)
-  const sideMappings = {
-    'green':  { 'F': 'F', 'B': 'B', 'R': 'R', 'L': 'L', 'U': 'U', 'D': 'D' },
-    'red':    { 'F': 'R', 'B': 'L', 'R': 'B', 'L': 'F', 'U': 'U', 'D': 'D' },
-    'blue':   { 'F': 'B', 'B': 'F', 'R': 'L', 'L': 'R', 'U': 'U', 'D': 'D' },
-    'orange': { 'F': 'L', 'B': 'R', 'R': 'F', 'L': 'B', 'U': 'U', 'D': 'D' }
+ const sideMappings = {
+    'green': isYellowTop 
+      ? { 'F': 'F', 'B': 'B', 'R': 'L', 'L': 'R', 'U': 'D', 'D': 'U' }
+      : { 'F': 'F', 'B': 'B', 'R': 'R', 'L': 'L', 'U': 'U', 'D': 'D' },
+
+    'red': isYellowTop
+      ? { 'F': 'R', 'B': 'L', 'R': 'F', 'L': 'B', 'U': 'D', 'D': 'U' } // Kad je žuta gore, desno od crvene je zelena (F)
+      : { 'F': 'R', 'B': 'L', 'R': 'B', 'L': 'F', 'U': 'U', 'D': 'D' }, // Kad je bela gore, desno od crvene je plava (B)
+
+    'blue': isYellowTop
+      ? { 'F': 'B', 'B': 'F', 'R': 'R', 'L': 'L', 'U': 'D', 'D': 'U' }
+      : { 'F': 'B', 'B': 'F', 'R': 'L', 'L': 'R', 'U': 'U', 'D': 'D' },
+
+    'orange': isYellowTop
+      ? { 'F': 'L', 'B': 'R', 'R': 'B', 'L': 'F', 'U': 'D', 'D': 'U' }
+      : { 'F': 'L', 'B': 'R', 'R': 'F', 'L': 'B', 'U': 'U', 'D': 'D' }
   };
 
   let newBase = sideMappings[frontColor]?.[baseMove] || baseMove;
 
   // 5. LOGIKA ZA GORE/DOLE (Vertikalno mapiranje)
-  if (isYellowTop) {
-    if (newBase === 'U') newBase = 'D';
-    else if (newBase === 'D') newBase = 'U';
-    // Kad je kocka naopačke, desno je levo, a levo je desno
-    else if (newBase === 'R') newBase = 'L';
-    else if (newBase === 'L') newBase = 'R';
-  }
+  // if (isYellowTop) {
+  //   if (newBase === 'U') newBase = 'D';
+  //   else if (newBase === 'D') newBase = 'U';
+  //   // Kad je kocka naopačke, desno je levo, a levo je desno
+  //   else if (newBase === 'R') newBase = 'L';
+  //   else if (newBase === 'L') newBase = 'R';
+  // }
 
   return newBase + suffix;
 }
