@@ -1,109 +1,129 @@
-// Controls.js — Keyboard Listeners, Move Execution & Animation Engine
-// Handles all 90° face rotations with smooth easing and post-move rounding.
-
+// Controls.js — SVE NA JEDNOM MESTU
 import * as THREE from 'three';
 import { MOVES, getLayerCubies, roundCubie, checkColorsSolved } from './Cube';
 
-// ─── ANIMATION SETTINGS ────────────────────────────────────────────────────────
-
-const ANIM_DURATION_MS = 140;  // Duration of one 90° rotation in milliseconds
-
-/**
- * easeInOut(t)
- * Smooth quadratic easing function. t ∈ [0, 1].
- */
+const ANIM_DURATION_MS = 140; 
 const easeInOut = t => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
 
-// ─── CORE MOVE EXECUTOR ────────────────────────────────────────────────────────
+// 1. FUNKCIJA ZA DETEKCIJU FRONTA (EXPORT-OVANA)
+export function detectCurrentFront(cubies) {
+  if (!cubies || cubies.length === 0) return 'green';
 
-/**
- * executeMove(moveName, cubies, animatingRef, stateSetters, stateRefs)
- *
- * Performs an animated 90° rotation of the appropriate cubie layer.
- *
- * Algorithm:
- *  1. Look up the move definition (axis, layer, direction).
- *  2. Filter cubies to those in the target layer using getLayerCubies().
- *  3. Snapshot the initial positions and quaternions of those cubies.
- *  4. In a requestAnimationFrame loop:
- *     a. Compute eased progress t ∈ [0, 1].
- *     b. Build a partial rotation quaternion for the current frame angle.
- *     c. Apply it to each cubie's world position and orientation.
- *  5. On completion, call roundCubie() on each moved cubie to snap values.
- *  6. Update React state (move count, history, solved flag, timer).
- *
- * @param {string}   moveName      — Key in MOVES, e.g. 'R', "U'", 'F'
- * @param {Array}    cubies        — All 27 cubie meshes
- * @param {Ref}      animatingRef  — Boolean ref; true while animation is running
- * @param {Object}   stateSetters  — { setMoveCount, setMoveHistory, setSolved, setTimerRunning }
- * @param {Object}   stateRefs     — { moveCountRef, solvedRef, timerRunRef, startTimeRef }
- */
-export function executeMove(moveName, cubies, animatingRef, stateSetters, stateRefs) {
-  const move = MOVES[moveName];
-  if (!move) {
-    console.warn(`[Controls] Unknown move: "${moveName}"`);
-    return;
+  const sideCenters = [
+    { color: 'green',  pos: { x: 0,  y: 0,  z: 1  } },
+    { color: 'red',    pos: { x: 1,  y: 0,  z: 0  } },
+    { color: 'blue',   pos: { x: 0,  y: 0,  z: -1 } },
+    { color: 'orange', pos: { x: -1, y: 0,  z: 0  } }
+  ];
+
+  let bestColor = 'green';
+  let maxZ = -Infinity;
+
+  sideCenters.forEach(center => {
+    const cubie = cubies.find(c => 
+      Math.round(c.position.x) === center.pos.x &&
+      Math.round(c.position.y) === center.pos.y &&
+      Math.round(c.position.z) === center.pos.z
+    );
+
+    if (cubie) {
+      const worldPos = new THREE.Vector3();
+      cubie.getWorldPosition(worldPos);
+      if (worldPos.z > maxZ) {
+        maxZ = worldPos.z;
+        bestColor = center.color;
+      }
+    }
+  });
+  return bestColor;
+}
+
+// 2. FUNKCIJA ZA MAPIRANJE (EXPORT-OVANA)
+export function getMappedMove(moveName, frontColor, cubies) {
+  // 1. OSNOVNA PROVERA
+  if (!cubies || !Array.isArray(cubies)) return moveName;
+
+  const baseMove = moveName.replace(/[2']/g, '');
+  const suffix = moveName.includes("'") ? "'" : (moveName.includes("2") ? "2" : "");
+
+  // 2. PRONALAŽENJE BELOG CENTRA
+  // Tražimo cubie koji je na samom početku bio na (0, 1, 0)
+  // To je jedini siguran način da znamo koja je to kockica "bela"
+  const whiteCenter = cubies.find(c => {
+    // Ako si dodao initialPos pri kreiranju, koristi to. 
+    // Ako nisi, tražimo onaj koji ima samo jedan materijal (centar) i bio je gore.
+    return Math.round(c.userData?.initialPos?.x) === 0 && 
+           Math.round(c.userData?.initialPos?.y) === 1 && 
+           Math.round(c.userData?.initialPos?.z) === 0;
+  }) || cubies[13]; // Fallback na srednji element niza ako pretraga ne uspe
+
+  // 3. DETEKCIJA "IS YELLOW TOP" PREKO WORLD COORDINATES
+  const worldPos = new THREE.Vector3();
+  whiteCenter.getWorldPosition(worldPos);
+  
+  // Ako je beli centar fizički ispod centra kocke (y < 0), znači da je žuta GORE
+  const isYellowTop = worldPos.y < -0.1;
+
+  // 4. TVOJA LOGIKA ZA FRONT (Horizontalno mapiranje)
+  const sideMappings = {
+    'green':  { 'F': 'F', 'B': 'B', 'R': 'R', 'L': 'L', 'U': 'U', 'D': 'D' },
+    'red':    { 'F': 'R', 'B': 'L', 'R': 'B', 'L': 'F', 'U': 'U', 'D': 'D' },
+    'blue':   { 'F': 'B', 'B': 'F', 'R': 'L', 'L': 'R', 'U': 'U', 'D': 'D' },
+    'orange': { 'F': 'L', 'B': 'R', 'R': 'F', 'L': 'B', 'U': 'U', 'D': 'D' }
+  };
+
+  let newBase = sideMappings[frontColor]?.[baseMove] || baseMove;
+
+  // 5. LOGIKA ZA GORE/DOLE (Vertikalno mapiranje)
+  if (isYellowTop) {
+    if (newBase === 'U') newBase = 'D';
+    else if (newBase === 'D') newBase = 'U';
+    // Kad je kocka naopačke, desno je levo, a levo je desno
+    else if (newBase === 'R') newBase = 'L';
+    else if (newBase === 'L') newBase = 'R';
   }
 
-  // Guard: skip if already animating (queue handles ordering)
-  if (animatingRef.current) return;
+  return newBase + suffix;
+}
+
+// 3. GLAVNI EGZEKUTOR (EXPORT-OVAN)
+export function executeMove(moveName, cubies, animatingRef, stateSetters, stateRefs) {
+  const move = MOVES[moveName];
+  if (!move || animatingRef.current) return;
   animatingRef.current = true;
 
   const { setMoveCount, setMoveHistory, setSolved, setTimerRunning } = stateSetters;
-  const { moveCountRef, solvedRef, timerRunRef, startTimeRef }        = stateRefs;
+  const { moveCountRef, solvedRef, timerRunRef } = stateRefs;
 
-  // ── 1. Select affected cubies ─────────────────────────────────────────────
   const layer = getLayerCubies(cubies, move.axis, move.layer);
+  const totalAngle = (Math.PI / 2) * move.dir;
+  const axisVec = new THREE.Vector3(move.axis === 'x' ? 1 : 0, move.axis === 'y' ? 1 : 0, move.axis === 'z' ? 1 : 0);
 
-  // ── 2. Build rotation metadata ────────────────────────────────────────────
-  const totalAngle = (Math.PI / 2) * move.dir;   // 90° in correct direction
-  const axisVec    = new THREE.Vector3(
-    move.axis === 'x' ? 1 : 0,
-    move.axis === 'y' ? 1 : 0,
-    move.axis === 'z' ? 1 : 0,
-  );
-
-  // ── 3. Snapshot start state ───────────────────────────────────────────────
-  const initPositions  = layer.map(c => c.position.clone());
+  const initPositions = layer.map(c => c.position.clone());
   const initQuaternions = layer.map(c => c.quaternion.clone());
+  const startTime = performance.now();
+  const frameQuat = new THREE.Quaternion();
 
-  const startTime      = performance.now();
-  const frameQuat      = new THREE.Quaternion();  // reused each frame
-
-  // ── 4. Animation loop ─────────────────────────────────────────────────────
   const animFrame = (now) => {
-    const elapsed  = now - startTime;
-    const rawT     = Math.min(elapsed / ANIM_DURATION_MS, 1);
-    const easedT   = easeInOut(rawT);
-    const angle    = totalAngle * easedT;
+    const elapsed = now - startTime;
+    const rawT = Math.min(elapsed / ANIM_DURATION_MS, 1);
+    const easedT = easeInOut(rawT);
+    const angle = totalAngle * easedT;
 
-    // Build partial quaternion for this frame's angle
     frameQuat.setFromAxisAngle(axisVec, angle);
-
     layer.forEach((cubie, i) => {
-      // Rotate world position around origin (0,0,0)
       cubie.position.copy(initPositions[i]).applyQuaternion(frameQuat);
-      // Compose rotations: new = frame * initial
       cubie.quaternion.copy(frameQuat).multiply(initQuaternions[i]);
     });
 
-    if (rawT < 1) {
-      requestAnimationFrame(animFrame);
-      return;
-    }
+    if (rawT < 1) { requestAnimationFrame(animFrame); return; }
 
-    // ── 5. Snap to grid after animation completes ─────────────────────────
     layer.forEach(roundCubie);
-
-    // ── 6. Update React state ─────────────────────────────────────────────
     animatingRef.current = false;
     moveCountRef.current++;
     setMoveCount(moveCountRef.current);
     setMoveHistory(prev => [...prev, moveName].slice(-20));
 
-    
-
-    // Check solve condition
     if (!solvedRef.current && checkColorsSolved(cubies)) {
       solvedRef.current = true;
       setSolved(true);
@@ -111,70 +131,20 @@ export function executeMove(moveName, cubies, animatingRef, stateSetters, stateR
       setTimerRunning(false);
     }
   };
-
   requestAnimationFrame(animFrame);
 }
 
-// ─── KEYBOARD HOOK ─────────────────────────────────────────────────────────────
-
-/**
- * useKeyboardControls(moveQueueRef)
- * React hook that registers keydown listeners and pushes move strings
- * onto the queue. Shift + key = prime (counter-clockwise) move.
- *
- * Bindings:
- *   R → R    Shift+R → R'
- *   L → L    Shift+L → L'
- *   U → U    Shift+U → U'
- *   D → D    Shift+D → D'
- *   F → F    Shift+F → F'
- *   B → B    Shift+B → B'
- */
-export function useKeyboardControls(moveQueueRef) {
-  // Import useEffect from React when using in a module context
-  const { useEffect } = require('react');
-
-  useEffect(() => {
-    const FACE_KEYS = new Set(['R', 'L', 'U', 'D', 'F', 'B']);
-
-    const onKeyDown = (event) => {
-      if (event.repeat) return;                           // ignore held keys
-      const key = event.key.toUpperCase();
-      if (!FACE_KEYS.has(key)) return;
-
-      event.preventDefault();                             // stop browser scroll etc.
-      const moveName = event.shiftKey ? `${key}'` : key;
-      moveQueueRef.current.push(moveName);
-    };
-
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [moveQueueRef]);
-}
-
-// ─── SCRAMBLE GENERATOR ────────────────────────────────────────────────────────
-
-/**
- * generateScramble(length?)
- * Returns an array of random move strings suitable for scrambling.
- * Avoids immediately repeating the same face move (e.g. R R).
- *
- * @param  {number} length — Number of moves (default: 20)
- * @returns {string[]}
- */
+// 4. GENERATOR SKRAMBLA (EXPORT-OVAN)
 export function generateScramble(length = 20) {
-  const moveKeys  = Object.keys(MOVES);
-  const faces     = ['R', 'L', 'U', 'D', 'F', 'B'];
-  const sequence  = [];
-  let   lastFace  = '';
-
+  const moveKeys = Object.keys(MOVES);
+  const sequence = [];
+  let lastFace = '';
   while (sequence.length < length) {
     const move = moveKeys[Math.floor(Math.random() * moveKeys.length)];
-    const face = move.replace("'", '');                   // strip prime
-    if (face === lastFace) continue;                      // no back-to-back same face
+    const face = move.replace(/[2']/g, '');
+    if (face === lastFace) continue;
     sequence.push(move);
     lastFace = face;
   }
-
   return sequence;
 }

@@ -18,7 +18,8 @@ const CFOP_STEPS = [
   algos: [
     { 
       name: "Case: Edge on Front-Bottom", 
-      moves: "F R'", 
+      moves: "F R'",
+      labelMoves:"F D F", 
       setup: "B2 L2 D2 U' R2 U B2 D2 F2 L2 F' R' B L D' R F D B F' U' L' D R F R",
       instruction: "If it's at the bottom, move F to bring it to the side, then R to bring it up."
     }
@@ -40,6 +41,7 @@ const CFOP_STEPS = [
     { 
       name: 'White Facing FRONT', 
       moves: "F D F'", 
+      labelMoves:"F D F",
       // SETUP: Prvo složi krst, pa izbaci ćošak tako da bela gleda NAPRED
       setup: "R' D' R L D L' B' D' B D' F D' F' D' L D L' R' D D R D", 
       instruction: "Front side down, Bottom right, Front side up."
@@ -47,6 +49,7 @@ const CFOP_STEPS = [
     { 
       name: 'White Facing RIGHT', 
       moves: "R' D' R", 
+      labelMoves: "R' D' R",
       // SETUP: Prvo složi krst, pa izbaci ćošak tako da bela gleda DESNO
       setup: "R' D' R L D L' B' D' B D' F D' F' D' L D L'", 
       instruction: "Right side down, Bottom left, Right side up."
@@ -54,6 +57,7 @@ const CFOP_STEPS = [
     { 
       name: 'White Facing BOTTOM', 
       moves: "R' D D R D R' D' R", 
+      labelMoves: "R' D D R D R' D' R",
       // SETUP: Prvo složi krst, pa izbaci ćošak tako da bela gleda u POD
       setup: "R' D' R L D L' B' D' B D' F D' F' D' L D L' R' D D R D R' D R D D", 
       instruction: "Double bottom turn to flip the white sticker to the side, then insert."
@@ -61,26 +65,34 @@ const CFOP_STEPS = [
   ] 
 },
   { 
-    id: 'oll', 
-    stage: '03', 
-    title: 'Yellow Face (OLL)', 
-    color: '#fbbf24', 
-    description: 'Orient the top layer to be all yellow.',
-    holding: 'Yellow on TOP.',
-    tasks: ['Yellow Cross', 'Sune to finish'], 
-    algos: [
-      { 
-        name: 'Yellow Cross (Line)', 
-        moves: "F R U R' U' F'", 
-        setup: "R2 U2 B2 D2 F2 R2 U2 L2 B2 U' B' R' F U2 L' D2 B' R2 U" 
-      },
-      { 
-        name: 'Sune', 
-        moves: "R U R' U R U2 R'", 
-        setup: "R U2 R' U' R U' R' B2 D2 F2 L2 U' R2 D B2 L2 F2 U2 R'" 
-      }
-    ] 
-  },
+  id: 'middle-layer', 
+  stage: '03', 
+  title: 'The Middle Layer', 
+  color: '#3b82f6', 
+  description: 'First layer is done. Flip the cube: YELLOW is now TOP. We solve the 4 middle edges.',
+  holding: 'Yellow face on TOP. White face on BOTTOM.',
+  tasks: [
+    'Find an edge piece on top without Yellow', 
+    'Rotate U to match its side color with the center (making a "T" shape)', 
+    'Check if it needs to go LEFT or RIGHT'
+  ], 
+  algos: [
+    { 
+      name: 'Insert to the RIGHT', 
+      moves: "U' R' U R U F U' F'", 
+      labelMoves: "U R U' R' U' F' U F",
+      setup: "U' R' U R U F U' F' U' R' U R U F U' F' U' R' U R U F U' F' U", // Ovo izbacuje složenu ivicu na vrh
+      instruction: "Up, Right, Up-prime, Right-prime... then rotate to front-face and insert."
+    },
+    { 
+      name: 'Insert to the LEFT', 
+      moves: "U L U' L' U' F' U F", 
+      labelMoves: "U' L' U L U F U' F'",
+      setup: "U L U' L' U' F' U F U L U' L' U' F' U F U L U' L' U' F' U F U'", // Ovo izbacuje levu ivicu
+      instruction: "Up-prime, Left-prime, Up, Left... then rotate to front-face and insert."
+    }
+  ] 
+},
   { 
     id: 'pll', 
     stage: '04', 
@@ -93,6 +105,7 @@ const CFOP_STEPS = [
       { 
         name: 'T-Perm', 
         moves: "R U R' U' R' F R2 U' R' U' R U R' F'", 
+        labelMoves:"F D F",
         setup: "R U R' U' R' F R2 U' R' U' R U R' F' D2 B2 L2 U2 F2 R2" 
       }
     ] 
@@ -232,11 +245,11 @@ export function RightSidebar({ open, onExecAlgo, onOpenHelper }) {
                       {step.algos.map((algo, idx) => (
                         <div key={idx} style={{ background: '#0a0c10', padding: '12px', borderRadius: '10px' }}>
                           <div style={{ fontSize: '10px', color: '#555', marginBottom: '4px', fontWeight: '700' }}>{algo.name}</div>
-                          <div style={{ fontSize: '14px', fontFamily: 'monospace', color: '#fff', textAlign: 'center', marginBottom: '10px' }}>{algo.moves}</div>
+                          <div style={{ fontSize: '14px', fontFamily: 'monospace', color: '#fff', textAlign: 'center', marginBottom: '10px' }}>{algo.labelMoves}</div>
                           
                           {/* GLAVNA PROMENA: Pozivamo onOpenHelper umesto onExecAlgo za tutorijal */}
                           <button 
-                            onClick={() => onOpenHelper(algo.name, algo.moves, algo.setup || "")}
+                           onClick={() => onOpenHelper(algo.name, algo.moves, algo.setup || "", algo.labelMoves || algo.moves)}
                             style={{ 
                               width: '100%', padding: '8px', background: '#38bdf8', color: '#000', 
                               border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: '900', cursor: 'pointer' 

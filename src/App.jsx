@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { initThree, createCubies, checkColorsSolved, MOVES } from './Cube'
-import { executeMove } from './Controls'
+import { executeMove, detectCurrentFront, getMappedMove } from './Controls'
 import { LeftSidebar, RightSidebar } from './Sidebar'
 import InstructionModal from './instructionModal';
 
@@ -17,6 +17,7 @@ export default function App() {
   const timerRunRef   = useRef(false)
   const startTimeRef  = useRef(null)
   const timerInterval = useRef(null)
+  const recordingRef = useRef("");
 
   const [moveCount,    setMoveCount]    = useState(0)
   const [time,         setTime]         = useState(0)
@@ -26,11 +27,20 @@ export default function App() {
   const [leftOpen,     setLeftOpen]     = useState(false)
   const [rightOpen,    setRightOpen]    = useState(false)
   const [scrambleSeq,  setScrambleSeq]  = useState('')
-  const [modalData, setModalData] = useState({ isOpen: false, title: '', algo: '', setup: '' });
+  const [modalData, setModalData] = useState({ isOpen: false, title: '', algo: '', setup: '', label: '' });
   
-  const openHelper = (title, algo, setup = "") => {
-  setModalData({ isOpen: true, title, algo, setup });
+  const openHelper = (title, algo, setup = "", label) => {
+  setModalData({ 
+    isOpen: true, 
+    title, 
+    algo, 
+    setup, 
+    label: label || algo // Ako nema posebnog labela, koristi običan algo
+  });
 };
+
+
+console.log("modaldata", modalData.labelMoves)
 
   // ── Three.js init ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -42,21 +52,23 @@ export default function App() {
     let raf
 const tick = () => {
   raf = requestAnimationFrame(tick);
-
-  // Samo pozovi update, on sada direktno menja scene.quaternion
-  three.update(); 
+  three.update();
 
   if (!animatingRef.current && moveQueueRef.current.length > 0) {
+    const nextMove = moveQueueRef.current.shift();
+
+    // SNIMANJE: Svaki potez (bio tvoj ili scramble) ide u ovaj strin
+
     executeMove(
-      moveQueueRef.current.shift(),
+      nextMove,
       cubiesRef.current,
       animatingRef,
       { setMoveCount, setMoveHistory, setSolved, setTimerRunning },
       { moveCountRef, solvedRef, timerRunRef, startTimeRef }
-    )
+    );
   }
   three.renderer.render(three.scene, three.camera);
-}
+};
     tick()
     return () => { cancelAnimationFrame(raf); three.dispose() }
   }, [])
@@ -74,20 +86,30 @@ const tick = () => {
   }, [timerRunning])
 
   // ── Keyboard ───────────────────────────────────────────────────────────────
-  useEffect(() => {
-    const handler = (e) => {
-      if (e.repeat) return
-      const key   = e.key.toUpperCase()
-      const prime = e.shiftKey
-      const map   = { R:'R', L:'L', U:'U', D:'D', F:'F', B:'B' }
-      if (map[key]) {
-        e.preventDefault()
-        moveQueueRef.current.push(prime ? `${key}'` : key)
-      }
+ useEffect(() => {
+  const handler = (e) => {
+    if (e.repeat) return;
+    const key = e.key.toUpperCase();
+    const prime = e.shiftKey;
+    
+    const validKeys = new Set(['R', 'L', 'U', 'D', 'F', 'B']);
+    if (validKeys.has(key)) {
+      e.preventDefault();
+
+      const rawMove = prime ? `${key}'` : key;
+
+      // Koristimo funkcije koje smo uvezli na vrhu fajla
+      // One će na osnovu cubiesRef.current znati šta gledaš
+      const currentFront = detectCurrentFront(cubiesRef.current);
+      const mappedMove = getMappedMove(rawMove, currentFront, cubiesRef.current);
+
+      moveQueueRef.current.push(mappedMove);
     }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [])
+  };
+
+  window.addEventListener('keydown', handler);
+  return () => window.removeEventListener('keydown', handler);
+}, []);
 
   // ── Actions ────────────────────────────────────────────────────────────────
   const scramble = useCallback(() => {
@@ -133,6 +155,7 @@ const tick = () => {
 
   const fmt = (s) =>
     `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
+  
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -177,6 +200,8 @@ const tick = () => {
   algoTitle={modalData.title}
   algorithm={modalData.algo}
   setup={modalData.setup} 
+  cubies={cubiesRef.current}
+  labelMoves={modalData.label}
 />
 
         {/* Canvas */}

@@ -91,10 +91,15 @@ export function createCubies(scene) {
           })
         );
 
+
+        
+
         const mesh = new THREE.Mesh(geometry, materials);
         mesh.position.set(x, y, z);
         mesh.castShadow    = true;
         mesh.receiveShadow = false;
+
+        mesh.userData.initialPos = { x, y, z };
 
         // Thin edge outlines for visual clarity
         const edges = new THREE.LineSegments(

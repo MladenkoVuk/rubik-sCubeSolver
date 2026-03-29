@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { createCubies, MOVES } from './Cube';
 
-export default function InstructionModal({ isOpen, onClose, algoTitle, algorithm, setup }) {
+export default function InstructionModal({ isOpen, onClose, algoTitle, algorithm, setup, labelMoves }) {
   const mountRef = useRef(null);
   const rendererRef = useRef(null);
   const requestRef = useRef();
@@ -10,7 +10,7 @@ export default function InstructionModal({ isOpen, onClose, algoTitle, algorithm
   const [currentMoveIdx, setCurrentMoveIdx] = useState(-1);
 
   // --- ADAPTIVNA ROTACIJA ZA MODAL ---
-  const rotateLayer = (cubies, moveKey, angle, isYellowTop) => {
+const rotateLayer = (cubies, moveKey, angle, isYellowTop) => {
     const baseMove = moveKey.replace(/[2']/g, '');
     let move = { ...MOVES[baseMove] }; 
     if (!move) return;
@@ -18,13 +18,17 @@ export default function InstructionModal({ isOpen, onClose, algoTitle, algorithm
     let direction = move.dir;
     if (moveKey.includes("'")) direction *= -1;
 
-    // KOREKCIJA AKO JE KOCKA OKRENUTA (DAISY)
+    // --- KLJUČNA ISPRAVKA ---
+    let layerToRotate = move.layer;
+
     if (isYellowTop) {
       if (move.axis === 'y') {
-        // Kada je žuta gore, U sloj je fizički na dnu (y: -1)
-        move.layer *= -1; 
+        // Želimo da U uvek vrti VRH ekrana (y: 1), a D dno (y: -1)
+        // Pošto smo celu kocku okrenuli, samo obrnemo SMER rotacije da prati pogled
+        layerToRotate = move.layer; // Ostaje 1 za U, -1 za D
+        direction *= -1; 
       } else {
-        // Za X i Z ose (R, L, F, B), smer rotacije se obrće jer gledamo "naglavačke"
+        // Za R, L, F, B ose, pošto gledamo naopačke, smer mora kontra
         direction *= -1;
       }
     }
@@ -38,7 +42,8 @@ export default function InstructionModal({ isOpen, onClose, algoTitle, algorithm
     const rotationMatrix = new THREE.Matrix4().makeRotationAxis(axisVector, angle * direction);
     
     cubies.forEach(cubie => {
-      if (Math.round(cubie.position[move.axis]) === move.layer) {
+      // Proveravamo poziciju u odnosu na trenutni vizuelni svet
+      if (Math.round(cubie.position[move.axis]) === layerToRotate) {
         cubie.position.applyMatrix4(rotationMatrix);
         cubie.quaternion.premultiply(new THREE.Quaternion().setFromRotationMatrix(rotationMatrix));
       }
@@ -62,7 +67,11 @@ export default function InstructionModal({ isOpen, onClose, algoTitle, algorithm
     const cubies = createCubies(scene);
 
 const titleLower = algoTitle?.toLowerCase() || "";
-const isYellowTop = titleLower.includes("edge") || titleLower.includes("daisy");
+const isYellowTop = titleLower.includes("edge") || 
+                   titleLower.includes("daisy") ||
+                   titleLower.includes("insert") || // Dovoljno je samo "insert"
+                   titleLower.includes("right")  || 
+                   titleLower.includes("left");
 
 // DODAJ OVO ZA DEBUGGING DA VIDIŠ U KONZOLI ŠTA MODAL MISLI:
 console.log("MODAL PROVERA:", { title: algoTitle, isYellowTop });
@@ -144,7 +153,7 @@ console.log("MODAL PROVERA:", { title: algoTitle, isYellowTop });
         <div ref={mountRef} style={styles.canvasContainer} />
 
         <div style={styles.algoBox}>
-          {algorithm && algorithm.split(' ').map((move, i) => (
+          {labelMoves && labelMoves.split(' ').map((move, i) => (
             <span key={i} style={{ 
               color: i === currentMoveIdx ? '#38bdf8' : '#fff', 
               opacity: i === currentMoveIdx ? 1 : 0.4,
