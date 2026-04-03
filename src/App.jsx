@@ -7,6 +7,70 @@ import { LeftSidebar, RightSidebar } from './Sidebar'
 import InstructionModal from './InstructionModal';
 import WelcomeModal from './WelcomeModal';
 
+// ── Hook za praćenje veličine ekrana ──────────────────────────────────────────
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= breakpoint);
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth <= breakpoint);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, [breakpoint]);
+  return isMobile;
+}
+
+// ── Mobilni D-Pad za poteze ───────────────────────────────────────────────────
+function MobileControls({ onMove }) {
+  const btnW = 52;
+  const btnH = 40;
+  const gap  = 6;
+
+  // Red 0: U' U (samo 2 dugmeta, poravnata lijevo)
+  // Red 1: L  F  F' R
+  // Red 2: L' D  D' R'
+  const rows = [
+    ["U'", "U",  null, null],
+    ["L",  "F",  "F'", "R" ],
+    ["L'", "D",  "D'", "R'"],
+  ];
+
+  return (
+    <div style={{ position: 'relative', width: 4 * btnW + 3 * gap, height: 3 * btnH + 2 * gap }}>
+      {rows.map((row, rowIdx) =>
+        row.map((label, colIdx) => {
+          if (!label) return null;
+          const isPrime = label.includes("'");
+          return (
+            <button
+              key={label}
+              onPointerDown={e => { e.preventDefault(); onMove(label); }}
+              style={{
+                position: 'absolute',
+                top:  rowIdx * (btnH + gap),
+                left: colIdx * (btnW + gap),
+                width: btnW,
+                height: btnH,
+                borderRadius: 8,
+                background: isPrime ? 'rgba(248,113,113,0.15)' : 'rgba(56,189,248,0.15)',
+                border: `1px solid ${isPrime ? 'rgba(248,113,113,0.35)' : 'rgba(56,189,248,0.35)'}`,
+                color: isPrime ? '#f87171' : '#38bdf8',
+                fontFamily: 'monospace',
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: 'pointer',
+                touchAction: 'none',
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
+              }}
+            >
+              {label}
+            </button>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
 export default function App() {
   const canvasRef     = useRef(null)
   const threeRef      = useRef(null)
@@ -18,10 +82,10 @@ export default function App() {
   const timerRunRef   = useRef(false)
   const startTimeRef  = useRef(null)
   const timerInterval = useRef(null)
-  const recordingRef = useRef("");
 
-  const [showWelcome, setShowWelcome] = useState(true)
+  const isMobile = useIsMobile();
 
+  const [showWelcome,  setShowWelcome]  = useState(true)
   const [moveCount,    setMoveCount]    = useState(0)
   const [time,         setTime]         = useState(0)
   const [timerRunning, setTimerRunning] = useState(false)
@@ -30,20 +94,11 @@ export default function App() {
   const [leftOpen,     setLeftOpen]     = useState(false)
   const [rightOpen,    setRightOpen]    = useState(false)
   const [scrambleSeq,  setScrambleSeq]  = useState('')
-  const [modalData, setModalData] = useState({ isOpen: false, title: '', algo: '', setup: '', label: '' });
-  
+  const [modalData,    setModalData]    = useState({ isOpen: false, title: '', algo: '', setup: '', label: '' });
+
   const openHelper = (title, algo, setup = "", label) => {
-  setModalData({ 
-    isOpen: true, 
-    title, 
-    algo, 
-    setup, 
-    label: label || algo // Ako nema posebnog labela, koristi običan algo
-  });
-};
-
-
-console.log("modaldata", modalData.labelMoves)
+    setModalData({ isOpen: true, title, algo, setup, label: label || algo });
+  };
 
   // ── Three.js init ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -52,28 +107,46 @@ console.log("modaldata", modalData.labelMoves)
     threeRef.current  = three
     cubiesRef.current = createCubies(three.scene)
 
+    // Renderer prati veličinu canvas elementa
+    const handleResize = () => {
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      if (w === 0 || h === 0) return;
+      three.renderer.setSize(w, h, false);
+      three.camera.aspect = w / h;
+
+      // Na mobilnom pomjeri kameru dalje — kocka izgleda manja
+      const isMob = window.innerWidth <= 768;
+      three.camera.position.z = isMob ? 11 : 7.5;
+
+      three.camera.updateProjectionMatrix();
+    };
+    window.addEventListener('resize', handleResize);
+    // Mali timeout da se layout "slegne" prije prvog mjerenja
+    setTimeout(handleResize, 50);
+
     let raf
-const tick = () => {
-  raf = requestAnimationFrame(tick);
-  three.update();
-
-  if (!animatingRef.current && moveQueueRef.current.length > 0) {
-    const nextMove = moveQueueRef.current.shift();
-
-    // SNIMANJE: Svaki potez (bio tvoj ili scramble) ide u ovaj strin
-
-    executeMove(
-      nextMove,
-      cubiesRef.current,
-      animatingRef,
-      { setMoveCount, setMoveHistory, setSolved, setTimerRunning },
-      { moveCountRef, solvedRef, timerRunRef, startTimeRef }
-    );
-  }
-  three.renderer.render(three.scene, three.camera);
-};
+    const tick = () => {
+      raf = requestAnimationFrame(tick);
+      three.update();
+      if (!animatingRef.current && moveQueueRef.current.length > 0) {
+        const nextMove = moveQueueRef.current.shift();
+        executeMove(
+          nextMove,
+          cubiesRef.current,
+          animatingRef,
+          { setMoveCount, setMoveHistory, setSolved, setTimerRunning },
+          { moveCountRef, solvedRef, timerRunRef, startTimeRef }
+        );
+      }
+      three.renderer.render(three.scene, three.camera);
+    };
     tick()
-    return () => { cancelAnimationFrame(raf); three.dispose() }
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', handleResize);
+      three.dispose();
+    }
   }, [])
 
   // ── Timer ──────────────────────────────────────────────────────────────────
@@ -89,30 +162,28 @@ const tick = () => {
   }, [timerRunning])
 
   // ── Keyboard ───────────────────────────────────────────────────────────────
- useEffect(() => {
-  const handler = (e) => {
-    if (e.repeat) return;
-    const key = e.key.toUpperCase();
-    const prime = e.shiftKey;
-    
-    const validKeys = new Set(['R', 'L', 'U', 'D', 'F', 'B']);
-    if (validKeys.has(key)) {
-      e.preventDefault();
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.repeat) return;
+      const key   = e.key.toUpperCase();
+      const prime = e.shiftKey;
+      const validKeys = new Set(['R', 'L', 'U', 'D', 'F', 'B']);
+      if (validKeys.has(key)) {
+        e.preventDefault();
+        const rawMove      = prime ? `${key}'` : key;
+        const currentFront = detectCurrentFront(cubiesRef.current);
+        const mappedMove   = getMappedMove(rawMove, currentFront, cubiesRef.current);
+        moveQueueRef.current.push(mappedMove);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
-      const rawMove = prime ? `${key}'` : key;
-
-      // Koristimo funkcije koje smo uvezli na vrhu fajla
-      // One će na osnovu cubiesRef.current znati šta gledaš
-      const currentFront = detectCurrentFront(cubiesRef.current);
-      const mappedMove = getMappedMove(rawMove, currentFront, cubiesRef.current);
-
-      moveQueueRef.current.push(mappedMove);
-    }
-  };
-
-  window.addEventListener('keydown', handler);
-  return () => window.removeEventListener('keydown', handler);
-}, []);
+  // ── Mobilni potez ──────────────────────────────────────────────────────────
+  const handleMobileMove = useCallback((moveLabel) => {
+    if (MOVES[moveLabel]) moveQueueRef.current.push(moveLabel);
+  }, []);
 
   // ── Actions ────────────────────────────────────────────────────────────────
   const scramble = useCallback(() => {
@@ -158,7 +229,11 @@ const tick = () => {
 
   const fmt = (s) =>
     `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
-  
+
+  const closeAllSidebars = () => {
+    setLeftOpen(false)
+    setRightOpen(false)
+  }
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -173,12 +248,12 @@ const tick = () => {
 
         <div className="header-status">
           <button
-  className="status-pill"
-  onClick={() => setShowWelcome(true)}
-  style={{ cursor: 'pointer', border: 'none', background: 'none' }}
->
-  ⓘ Info
-</button>
+            className="status-pill"
+            onClick={() => setShowWelcome(true)}
+            style={{ cursor: 'pointer', border: 'none', background: 'none' }}
+          >
+            ⓘ Info
+          </button>
           <div className={`status-pill ${timerRunning ? 'active' : ''}`}>
             {timerRunning ? '⏱ Timing' : '⏸ Ready'}
           </div>
@@ -190,14 +265,40 @@ const tick = () => {
           </div>
         </div>
       </header>
+
+      {/* ── Modali ── */}
       {showWelcome && <WelcomeModal onClose={() => setShowWelcome(false)} />}
+      <InstructionModal
+        isOpen={modalData.isOpen}
+        onClose={() => setModalData({ ...modalData, isOpen: false })}
+        algoTitle={modalData.title}
+        algorithm={modalData.algo}
+        setup={modalData.setup}
+        cubies={cubiesRef.current}
+        labelMoves={modalData.label}
+      />
 
       {/* ── Body ── */}
-      <div className="app-body">
+      <div className="app-body" style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
+
+        {/* Backdrop — position:fixed da pokrije i header */}
+        {(leftOpen || rightOpen) && (
+          <div
+            onClick={closeAllSidebars}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0,0,0,0.55)',
+              zIndex: 499,
+              backdropFilter: 'blur(2px)',
+            }}
+          />
+        )}
 
         {/* Left sidebar */}
         <LeftSidebar
           open={leftOpen}
+          onClose={closeAllSidebars}
           time={fmt(time)}
           moveCount={moveCount}
           timerRunning={timerRunning}
@@ -205,102 +306,126 @@ const tick = () => {
           onReset={reset}
           onToggleTimer={toggleTimer}
         />
-        <InstructionModal 
-  isOpen={modalData.isOpen} 
-  onClose={() => setModalData({ ...modalData, isOpen: false })}
-  algoTitle={modalData.title}
-  algorithm={modalData.algo}
-  setup={modalData.setup} 
-  cubies={cubiesRef.current}
-  labelMoves={modalData.label}
-/>
 
-        {/* Canvas */}
-        <div className="canvas-area">
-          <canvas ref={canvasRef} id="cube-canvas" />
+        {/* Canvas area — flex kolona: canvas gore, D-pad dole */}
+        <div
+          className="canvas-area"
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            position: 'relative',
+          }}
+        >
+          {/* ── Gornji dio: samo kocka ── */}
+          <div style={{ flex: 1, position: 'relative', overflow: 'hidden', minHeight: 0 }}>
+            <canvas
+              ref={canvasRef}
+              id="cube-canvas"
+              style={{ width: '100%', height: '100%', display: 'block' }}
+            />
 
-          {/* Scramble indicator */}
-          {scrambleSeq && (
-            <div className="scramble-indicator">
-              ◎ Scrambled — Ready to solve
-            </div>
-          )}
+            {/* Scramble indicator */}
+            {scrambleSeq && (
+              <div className="scramble-indicator">◎ Scrambled — Ready to solve</div>
+            )}
 
-          {/* Notation tip */}
-          <div className="notation-tip">
-            Clockwise · R L U D F B<br />
-            Counter-CW · Shift + key
-          </div>
+            {/* Notation tip — samo desktop */}
+            {!isMobile && (
+              <div className="notation-tip">
+                Clockwise · R L U D F B<br />
+                Counter-CW · Shift + key
+              </div>
+            )}
 
-          {/* Move history */}
-          {moveHistory.length > 0 && (
-            <div className="move-history">
-              {moveHistory.slice(-9).map((m, i, arr) => (
-                <div
-                  key={i}
-                  className={`move-badge ${i === arr.length - 1 ? 'recent' : ''}`}
-                >
-                  {m}
-                </div>
-              ))}
-            </div>
-          )}
+            {/* Move history — pozicioniran na dnu ovog diva */}
+            {moveHistory.length > 0 && (
+              <div
+                className="move-history"
+                style={isMobile ? { bottom: 8 } : {}}
+              >
+                {moveHistory.slice(-9).map((m, i, arr) => (
+                  <div key={i} className={`move-badge ${i === arr.length - 1 ? 'recent' : ''}`}>
+                    {m}
+                  </div>
+                ))}
+              </div>
+            )}
 
-          {/* Solved overlay */}
-          {solved && (
-            <div className="solved-overlay" onClick={() => setSolved(false)}>
-              <div className="solved-card" onClick={e => e.stopPropagation()}>
-                <div className="solved-subtitle">Congratulations</div>
-                <div className="solved-title">Solved!</div>
-                <div className="solved-stats">
-                  {fmt(time)}
-                  <span>·</span>
-                  {moveCount} moves
-                </div>
+            {/* Sidebar toggle dugmad — gore desno, samo mobilno */}
+            {isMobile && (
+              <div style={{
+                position: 'absolute', top: 12, right: 12,
+                display: 'flex', flexDirection: 'column', gap: 8, zIndex: 100,
+              }}>
                 <button
-                  className="btn success"
-                  style={{ marginBottom: 10 }}
-                  onClick={reset}
-                >
-                  ↺ New Cube
-                </button>
-                <div
+                  onClick={() => { setLeftOpen(!leftOpen); setRightOpen(false); }}
                   style={{
-                    fontSize: 11,
-                    color: 'var(--text-tertiary)',
-                    fontFamily: 'var(--font-mono)',
-                    letterSpacing: '0.04em',
+                    width: 42, height: 42, borderRadius: '50%',
+                    background: leftOpen ? 'rgba(56,189,248,0.25)' : 'rgba(255,255,255,0.07)',
+                    border: `1px solid ${leftOpen ? 'rgba(56,189,248,0.5)' : 'rgba(255,255,255,0.12)'}`,
+                    color: '#fff', fontSize: 17, cursor: 'pointer',
+                    backdropFilter: 'blur(8px)',
                   }}
-                >
-                  Click outside to dismiss
+                >☰</button>
+                <button
+                  onClick={() => { setRightOpen(!rightOpen); setLeftOpen(false); }}
+                  style={{
+                    width: 42, height: 42, borderRadius: '50%',
+                    background: rightOpen ? 'rgba(56,189,248,0.25)' : 'rgba(255,255,255,0.07)',
+                    border: `1px solid ${rightOpen ? 'rgba(56,189,248,0.5)' : 'rgba(255,255,255,0.12)'}`,
+                    color: '#fff', fontSize: 17, cursor: 'pointer',
+                    backdropFilter: 'blur(8px)',
+                  }}
+                >📖</button>
+              </div>
+            )}
+
+            {/* Solved overlay */}
+            {solved && (
+              <div className="solved-overlay" onClick={() => setSolved(false)}>
+                <div className="solved-card" onClick={e => e.stopPropagation()}>
+                  <div className="solved-subtitle">Congratulations</div>
+                  <div className="solved-title">Solved!</div>
+                  <div className="solved-stats">
+                    {fmt(time)}<span>·</span>{moveCount} moves
+                  </div>
+                  <button className="btn success" style={{ marginBottom: 10 }} onClick={reset}>
+                    ↺ New Cube
+                  </button>
+                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}>
+                    Click outside to dismiss
+                  </div>
                 </div>
               </div>
+            )}
+          </div>
+
+          {/* ── Donji dio: D-pad — fiksna visina, vidljiv ispod kocke ── */}
+          {isMobile && (
+            <div style={{
+              flexShrink: 0,
+              height: 152,
+              background: 'rgba(6,9,16,0.92)',
+              borderTop: '1px solid rgba(255,255,255,0.06)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backdropFilter: 'blur(8px)',
+            }}>
+              <MobileControls onMove={handleMobileMove} />
             </div>
           )}
-
-          {/* Mobile toggles */}
-          <button
-            className="mobile-toggle"
-            style={{ bottom: 76 }}
-            onClick={() => { setLeftOpen(!leftOpen); setRightOpen(false) }}
-          >
-            ☰
-          </button>
-          <button
-            className="mobile-toggle"
-            style={{ bottom: 20 }}
-            onClick={() => { setRightOpen(!rightOpen); setLeftOpen(false) }}
-          >
-            📖
-          </button>
         </div>
 
         {/* Right sidebar */}
-       <RightSidebar 
-  open={rightOpen} 
-  onExecAlgo={execAlgo} 
-  onOpenHelper={openHelper} // DODAJ OVO
-/>
+        <RightSidebar
+          open={rightOpen}
+          onClose={closeAllSidebars}
+          onExecAlgo={execAlgo}
+          onOpenHelper={openHelper}
+        />
       </div>
     </div>
   )

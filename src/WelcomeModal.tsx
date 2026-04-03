@@ -1,6 +1,10 @@
 // WelcomeModal.jsx — Kontrole i info modal za Cube Trainer
 
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
+
+type WelcomeModalProps = {
+  onClose: () => void
+}
 
 const CONTROLS = [
   { key: 'R', label: 'Right face', color: '#e74c3c' },
@@ -11,11 +15,10 @@ const CONTROLS = [
   { key: 'B', label: 'Back face',  color: '#3498db' },
 ]
 
-export default function WelcomeModal({ onClose }: { onClose: () => void }) {
+export default function WelcomeModal({ onClose }: WelcomeModalProps) {
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
-    // Mali delay da animacija bude lijepa
     const t = setTimeout(() => setVisible(true), 50)
     return () => clearTimeout(t)
   }, [])
@@ -44,6 +47,7 @@ export default function WelcomeModal({ onClose }: { onClose: () => void }) {
     >
       <div
         onClick={e => e.stopPropagation()}
+        className="welcome-modal-inner"
         style={{
           background: '#111',
           border: '1px solid #2a2a2a',
@@ -58,7 +62,7 @@ export default function WelcomeModal({ onClose }: { onClose: () => void }) {
           overflow: 'hidden',
         }}
       >
-        {/* Dekorativni gradient u pozadini */}
+        {/* Dekorativni gradient */}
         <div style={{
           position: 'absolute',
           top: -60,
@@ -72,12 +76,7 @@ export default function WelcomeModal({ onClose }: { onClose: () => void }) {
 
         {/* Header */}
         <div style={{ marginBottom: '1.5rem' }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            marginBottom: 6,
-          }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <div style={{
               width: 8, height: 8,
               borderRadius: '50%',
@@ -121,11 +120,15 @@ export default function WelcomeModal({ onClose }: { onClose: () => void }) {
             Keyboard Controls
           </div>
 
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: 8,
-          }}>
+          {/* Grid — klasa omogućava CSS override na mobilnom */}
+          <div
+            className="welcome-controls-grid"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: 8,
+            }}
+          >
             {CONTROLS.map(({ key, label, color }) => (
               <div key={key} style={{
                 background: '#1a1a1a',

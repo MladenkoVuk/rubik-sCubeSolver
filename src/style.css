@@ -75,3 +75,307 @@ ion-button:active {
   color: #ffd500;
   letter-spacing: 2px;
 }
+/* ═══════════════════════════════════════════════════════════
+   CUBE TRAINER — MOBILE RESPONSIVE
+   Dodaj ovo na kraj tvog globalnog CSS fajla
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── BASE: Desktop ostaje isti, mijenjamo samo mobile ── */
+
+/* ── HEADER ────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .app-header {
+    padding: 10px 14px;
+    gap: 8px;
+  }
+
+  .app-title {
+    font-size: 14px;
+  }
+
+  .header-status {
+    gap: 6px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .header-status::-webkit-scrollbar {
+    display: none;
+  }
+
+  .status-pill {
+    font-size: 10px;
+    padding: 4px 8px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+}
+
+/* ── SIDEBARI ───────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed !important;
+    top: 0;
+    bottom: 0;
+    z-index: 500;
+    width: 85vw !important;
+    max-width: 320px !important;
+    transform: translateX(-110%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: none;
+  }
+
+  .sidebar.left {
+    left: 0;
+    transform: translateX(-110%);
+  }
+
+  .sidebar.right {
+    right: 0;
+    left: auto;
+    transform: translateX(110%);
+  }
+
+  .sidebar.left.visible {
+    transform: translateX(0);
+    box-shadow: 8px 0 40px rgba(0, 0, 0, 0.8);
+  }
+
+  .sidebar.right.visible {
+    transform: translateX(0);
+    box-shadow: -8px 0 40px rgba(0, 0, 0, 0.8);
+  }
+}
+
+/* ── CANVAS AREA ────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .app-body {
+    position: relative;
+  }
+
+  .canvas-area {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  #cube-canvas {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  .notation-tip {
+    font-size: 10px;
+    bottom: 120px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .scramble-indicator {
+    font-size: 11px;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+  }
+
+  .move-history {
+    bottom: 160px;
+    left: 50%;
+    transform: translateX(-50%);
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    max-width: 90vw;
+    scrollbar-width: none;
+  }
+
+  .move-history::-webkit-scrollbar {
+    display: none;
+  }
+
+  .move-badge {
+    font-size: 10px;
+    padding: 3px 6px;
+    flex-shrink: 0;
+  }
+}
+
+/* ── MOBILE TOGGLE DUGMAD ───────────────────────────────── */
+@media (max-width: 768px) {
+  .mobile-toggle {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+    position: absolute;
+    right: 14px;
+    backdrop-filter: blur(8px);
+    z-index: 100;
+    transition: background 0.2s;
+  }
+
+  .mobile-toggle:active {
+    background: rgba(255, 255, 255, 0.12);
+  }
+}
+
+/* Na desktopu sakrij mobile toggle dugmad */
+@media (min-width: 769px) {
+  .mobile-toggle {
+    display: none !important;
+  }
+}
+
+/* ── BACKDROP kad je sidebar otvoren ────────────────────── */
+.sidebar-backdrop {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 499;
+    backdrop-filter: blur(2px);
+    animation: fadeIn 0.2s ease;
+  }
+}
+
+/* ── WELCOME MODAL ──────────────────────────────────────── */
+@media (max-width: 480px) {
+  /* Modal container */
+  .welcome-modal-inner {
+    padding: 1.5rem !important;
+    border-radius: 12px !important;
+    max-height: 90vh;
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+
+  .welcome-modal-inner::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Grid od 3 kolone → 2 kolone na mobilnom */
+  .welcome-controls-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* ── INSTRUCTION MODAL ──────────────────────────────────── */
+@media (max-width: 480px) {
+  .instruction-modal-content {
+    width: 95vw !important;
+    padding: 24px 16px !important;
+    border-radius: 20px !important;
+    max-height: 95vh;
+    overflow-y: auto;
+  }
+
+  .instruction-canvas-container {
+    width: 260px !important;
+    height: 260px !important;
+  }
+
+  .instruction-algo-box {
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 12px;
+  }
+}
+
+/* ── SOLVED OVERLAY ─────────────────────────────────────── */
+@media (max-width: 480px) {
+  .solved-card {
+    padding: 24px 20px !important;
+    margin: 0 16px;
+    border-radius: 20px !important;
+  }
+
+  .solved-title {
+    font-size: 2.5rem !important;
+  }
+
+  .solved-stats {
+    font-size: 1rem !important;
+  }
+}
+
+/* ── LANDSCAPE PHONE ────────────────────────────────────── */
+@media (max-height: 500px) and (orientation: landscape) {
+  .app-header {
+    padding: 6px 14px;
+  }
+
+  .mobile-toggle {
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 14px !important;
+  }
+
+  .mobile-toggle[style*="bottom: 76px"] {
+    bottom: 48px !important;
+  }
+
+  .mobile-toggle[style*="bottom: 20px"] {
+    bottom: 8px !important;
+  }
+}
+
+/* ── ANIMACIJA ──────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── CANVAS + D-PAD LAYOUT NA MOBILNOM ─────────────────── */
+/*
+  D-pad je visok 3 reda × 40px + 2 × 6px gap = 132px
+  + 12px bottom padding = ~155px ukupno
+  Move history mora biti IZNAD toga, kocka mora biti MANJA
+*/
+
+@media (max-width: 768px) {
+
+  /* Canvas area dobija padding-bottom = visina D-pada + margina */
+  .canvas-area {
+    padding-bottom: 170px !important;
+  }
+
+  /* Move history se podiže iznad D-pada */
+  .move-history {
+    bottom: 178px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+  }
+
+  /* Scramble indicator ostaje gore ali ne smeta toggle dugmadima */
+  .scramble-indicator {
+    top: 12px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    font-size: 10px !important;
+    padding: 4px 12px !important;
+  }
+}
+
+/* Landscape: D-pad je kompaktniji, manje bottom paddinga */
+@media (max-width: 768px) and (orientation: landscape) {
+  .canvas-area {
+    padding-bottom: 140px !important;
+  }
+  .move-history {
+    bottom: 148px !important;
+  }
+}
