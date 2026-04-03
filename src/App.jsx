@@ -4,7 +4,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { initThree, createCubies, checkColorsSolved, MOVES } from './Cube'
 import { executeMove, detectCurrentFront, getMappedMove } from './Controls'
 import { LeftSidebar, RightSidebar } from './Sidebar'
-import InstructionModal from './instructionModal';
+import InstructionModal from './InstructionModal';
+import WelcomeModal from './WelcomeModal';
 
 export default function App() {
   const canvasRef     = useRef(null)
@@ -18,6 +19,8 @@ export default function App() {
   const startTimeRef  = useRef(null)
   const timerInterval = useRef(null)
   const recordingRef = useRef("");
+
+  const [showWelcome, setShowWelcome] = useState(true)
 
   const [moveCount,    setMoveCount]    = useState(0)
   const [time,         setTime]         = useState(0)
@@ -169,6 +172,13 @@ const tick = () => {
         </div>
 
         <div className="header-status">
+          <button
+  className="status-pill"
+  onClick={() => setShowWelcome(true)}
+  style={{ cursor: 'pointer', border: 'none', background: 'none' }}
+>
+  ⓘ Info
+</button>
           <div className={`status-pill ${timerRunning ? 'active' : ''}`}>
             {timerRunning ? '⏱ Timing' : '⏸ Ready'}
           </div>
@@ -180,6 +190,7 @@ const tick = () => {
           </div>
         </div>
       </header>
+      {showWelcome && <WelcomeModal onClose={() => setShowWelcome(false)} />}
 
       {/* ── Body ── */}
       <div className="app-body">
