@@ -20,21 +20,25 @@ function useIsMobile(breakpoint = 768) {
 
 // ── Mobilni D-Pad za poteze ───────────────────────────────────────────────────
 function MobileControls({ onMove }) {
-  const btnW = 52;
-  const btnH = 40;
-  const gap  = 6;
+  // Dinamički izračun da stane na svaki ekran
+  const screenW = window.innerWidth;
+  // 4 kolone + 3 gapa — maksimalno 95% širine ekrana
+  const totalCols = 4;
+  const gap = 5;
+  const btnW = Math.min(52, Math.floor((screenW * 0.95 - gap * (totalCols - 1)) / totalCols));
+  const btnH = 38;
 
-  // Red 0: U' U (samo 2 dugmeta, poravnata lijevo)
-  // Red 1: L  F  F' R
-  // Red 2: L' D  D' R'
   const rows = [
     ["U'", "U",  null, null],
     ["L",  "F",  "F'", "R" ],
     ["L'", "D",  "D'", "R'"],
   ];
 
+  const totalW = totalCols * btnW + (totalCols - 1) * gap;
+  const totalH = 3 * btnH + 2 * gap;
+
   return (
-    <div style={{ position: 'relative', width: 4 * btnW + 3 * gap, height: 3 * btnH + 2 * gap }}>
+    <div style={{ position: 'relative', width: totalW, height: totalH }}>
       {rows.map((row, rowIdx) =>
         row.map((label, colIdx) => {
           if (!label) return null;
@@ -49,17 +53,21 @@ function MobileControls({ onMove }) {
                 left: colIdx * (btnW + gap),
                 width: btnW,
                 height: btnH,
-                borderRadius: 8,
+                borderRadius: 7,
                 background: isPrime ? 'rgba(248,113,113,0.15)' : 'rgba(56,189,248,0.15)',
-                border: `1px solid ${isPrime ? 'rgba(248,113,113,0.35)' : 'rgba(56,189,248,0.35)'}`,
+                border: `1px solid ${isPrime ? 'rgba(248,113,113,0.4)' : 'rgba(56,189,248,0.4)'}`,
                 color: isPrime ? '#f87171' : '#38bdf8',
                 fontFamily: 'monospace',
-                fontSize: 13,
+                fontSize: Math.max(11, btnW * 0.22),
                 fontWeight: 700,
                 cursor: 'pointer',
                 touchAction: 'none',
                 userSelect: 'none',
                 WebkitUserSelect: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 0,
               }}
             >
               {label}
@@ -406,13 +414,14 @@ export default function App() {
           {isMobile && (
             <div style={{
               flexShrink: 0,
-              height: 152,
-              background: 'rgba(6,9,16,0.92)',
-              borderTop: '1px solid rgba(255,255,255,0.06)',
+              // Auto visina: 3 reda × 38px + 2 × 5px gap + 24px padding
+              padding: '12px 0',
+              background: 'rgba(6,9,16,0.95)',
+              borderTop: '1px solid rgba(255,255,255,0.08)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              backdropFilter: 'blur(8px)',
+              width: '100%',
             }}>
               <MobileControls onMove={handleMobileMove} />
             </div>
